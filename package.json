@@ -1,0 +1,73 @@
+{
+  "name": "@will-cppa/pinecone-read-only-mcp",
+  "version": "0.1.0",
+  "description": "A Model Context Protocol (MCP) server that provides semantic search over Pinecone vector databases using hybrid search (dense + sparse) with reranking.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "pinecone-read-only-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "mcp",
+    "pinecone",
+    "rag",
+    "semantic-search",
+    "read-only",
+    "vector-database",
+    "model-context-protocol"
+  ],
+  "author": "Will Pak <will@cppalliance.org>",
+  "license": "BSL-1.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/issues"
+  },
+  "homepage": "https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "build:watch": "tsc --watch",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:search": "tsx scripts/test-search.ts",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"*.json\" \".prettierrc\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"*.json\" \".prettierrc\"",
+    "typecheck": "tsc --noEmit",
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run build && npm test",
+    "ci:local": "bash scripts/ci-local.sh",
+    "prepublishOnly": "npm run ci",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "@pinecone-database/pinecone": "^5.1.1",
+    "zod": "^4.3.6",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/node": "^22.14.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.53.1",
+    "vitest": "^3.2.4"
+  }
+}

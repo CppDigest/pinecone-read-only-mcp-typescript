@@ -1,0 +1,428 @@
+# Pinecone Read-Only MCP (TypeScript)
+
+[![npm version](https://img.shields.io/npm/v/@will-cppa/pinecone-read-only-mcp.svg)](https://www.npmjs.com/package/@will-cppa/pinecone-read-only-mcp)
+[![Node.js Version](https://img.shields.io/node/v/@will-cppa/pinecone-read-only-mcp.svg)](https://nodejs.org)
+[![License: BSL-1.0](https://img.shields.io/badge/License-BSL--1.0-blue.svg)](https://opensource.org/licenses/BSL-1.0)
+[![CI](https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/workflows/CI/badge.svg)](https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/actions)
+
+A Model Context Protocol (MCP) server that provides semantic search over Pinecone vector databases using hybrid search (dense + sparse) with reranking.
+
+## Features
+
+- **Hybrid Search**: Combines dense and sparse embeddings for superior recall
+- **Semantic Reranking**: Uses BGE reranker model for improved precision
+- **Dynamic Namespace Discovery**: Automatically discovers available namespaces in your Pinecone index
+- **Metadata Filtering**: Supports optional metadata filters for refined searches
+- **Fast & Optimized**: Lazy initialization, connection pooling, and efficient result merging
+- **Production Ready**: Input validation, error handling, and configurable logging
+- **TypeScript Support**: Full TypeScript support with type definitions
+
+## Installation
+
+### As a Package
+
+```bash
+npm install @will-cppa/pinecone-read-only-mcp
+```
+
+Or using yarn:
+
+```bash
+yarn add @will-cppa/pinecone-read-only-mcp
+```
+
+Or using pnpm:
+
+```bash
+pnpm add @will-cppa/pinecone-read-only-mcp
+```
+
+### Global Installation
+
+```bash
+npm install -g @will-cppa/pinecone-read-only-mcp
+```
+
+### From Source
+
+```bash
+git clone https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript.git
+cd pinecone-read-only-mcp-typescript
+npm install
+npm run build
+```
+
+## Configuration
+
+The server requires a Pinecone API key and supports the following configuration options:
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PINECONE_API_KEY` | Yes | - | Your Pinecone API key |
+| `PINECONE_INDEX_NAME` | No | `rag-hybrid` | Pinecone index name |
+| `PINECONE_RERANK_MODEL` | No | `bge-reranker-v2-m3` | Reranking model |
+| `PINECONE_READ_ONLY_MCP_LOG_LEVEL` | No | `INFO` | Logging level |
+
+### Claude Desktop Configuration
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "pinecone-search": {
+      "command": "npx",
+      "args": ["-y", "@will-cppa/pinecone-read-only-mcp"],
+      "env": {
+        "PINECONE_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+Or with explicit options:
+
+```json
+{
+  "mcpServers": {
+    "pinecone-search": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@will-cppa/pinecone-read-only-mcp",
+        "--api-key", "your-api-key-here",
+        "--index-name", "your-index-name",
+        "--rerank-model", "bge-reranker-v2-m3"
+      ]
+    }
+  }
+}
+```
+
+For a global installation:
+
+```json
+{
+  "mcpServers": {
+    "pinecone-search": {
+      "command": "pinecone-read-only-mcp",
+      "args": ["--api-key", "your-api-key-here"]
+    }
+  }
+}
+```
+
+## Usage
+
+### Command Line
+
+Run the server using npx (no installation required):
+
+```bash
+npx @will-cppa/pinecone-read-only-mcp --api-key YOUR_API_KEY
+```
+
+Or if installed globally:
+
+```bash
+pinecone-read-only-mcp --api-key YOUR_API_KEY
+```
+
+Or if installed locally in your project:
+
+```bash
+node node_modules/@will-cppa/pinecone-read-only-mcp/dist/index.js --api-key YOUR_API_KEY
+```
+
+### Available Options
+
+```
+--api-key TEXT        Pinecone API key (or set PINECONE_API_KEY env var)
+--index-name TEXT     Pinecone index name [default: rag-hybrid]
+--rerank-model TEXT   Reranking model [default: bge-reranker-v2-m3]
+--log-level TEXT      Logging level [default: INFO]
+--help, -h            Show help message
+```
+
+## API Documentation
+
+The server exposes the following tools via MCP:
+
+### `list_namespaces`
+
+Discovers and lists all available namespaces in the configured Pinecone index, including metadata fields and record counts for each namespace.
+
+**Parameters:** None
+
+**Returns:** JSON object with namespace details including available metadata fields
+
+**Example response:**
+```json
+{
+  "status": "success",
+  "count": 3,
+  "namespaces": [
+    {
+      "name": "namespace1",
+      "record_count": 1500,
+      "metadata_fields": {
+        "author": "string",
+        "year": "number",
+        "category": "string"
+      }
+    },
+    {
+      "name": "namespace2",
+      "record_count": 850,
+      "metadata_fields": {
+        "title": "string",
+        "date": "string"
+      }
+    }
+  ]
+}
+```
+
+### `query`
+
+Performs hybrid semantic search over the specified namespace in the Pinecone index with optional metadata filtering.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `query_text` | string | Yes | - | Search query text |
+| `namespace` | string | Yes | - | Namespace to search (use `list_namespaces` to discover) |
+| `top_k` | integer | No | `10` | Number of results (1-100) |
+| `use_reranking` | boolean | No | `true` | Enable semantic reranking |
+| `metadata_filter` | object | No | - | Metadata filter to narrow results (e.g., `{"author": "John", "year": 2023}`) |
+
+**Returns:** JSON object with search results including content, relevance scores, and metadata
+
+**Example response:**
+```json
+{
+  "status": "success",
+  "query": "your search query",
+  "namespace": "namespace1",
+  "metadata_filter": {"author": "John Doe"},
+  "result_count": 10,
+  "results": [
+    {
+      "paper_number": "DOC-001",
+      "title": "Document Title",
+      "author": "John Doe",
+      "url": "https://example.com/doc",
+      "content": "Document content preview...",
+      "score": 0.9234,
+      "reranked": true
+    }
+  ]
+}
+```
+
+**Using Metadata Filters:**
+
+Metadata filters allow you to narrow down search results based on document properties. First, use `list_namespaces` to see available metadata fields, then apply filters.
+
+**Supported Operators (10 total):**
+
+| Operator | Syntax | Description | Example |
+|----------|--------|-------------|---------|
+| Equal | `$eq` or value directly | Exact match | `{"status": "published"}` or `{"status": {"$eq": "published"}}` |
+| Not Equal | `$ne` | Not equal to | `{"status": {"$ne": "draft"}}` |
+| Greater Than | `$gt` | Greater than | `{"year": {"$gt": 2022}}` |
+| Greater Than or Equal | `$gte` | Greater than or equal | `{"timestamp": {"$gte": 1704067200}}` |
+| Less Than | `$lt` | Less than | `{"score": {"$lt": 0.5}}` |
+| Less Than or Equal | `$lte` | Less than or equal | `{"priority": {"$lte": 3}}` |
+| In Array | `$in` | Value is in array field | `{"tags": {"$in": ["cpp", "contracts"]}}` (only for array-type fields) |
+| Not In Array | `$nin` | Value not in array field | `{"tags": {"$nin": ["draft", "archived"]}}` (only for array-type fields) |
+
+**Filter Examples:**
+
+```json
+// Exact match (implicit $eq) - works for single-value string fields
+{"status": "published"}
+
+// Exact string match - NOTE: requires full exact match
+{"author": "John Lakos"}  // Only matches if author field is exactly "John Lakos"
+
+// Array field contains value (use $in only for array-type fields)
+{"tags": {"$in": ["cpp", "contracts"]}}  // Only if tags is stored as an array
+
+// Numeric comparison
+{"year": {"$gte": 2023}}
+
+// Timestamp range (papers from last 2 years)
+{"timestamp": {"$gte": 1704067200}}
+
+// Multiple conditions on same field
+{"score": {"$gt": 0.8, "$lt": 1.0}}
+{"timestamp": {"$gte": 1704067200, "$lte": 1735689600}}
+
+// Multiple fields (AND logic)
+{
+  "year": {"$gte": 2023},
+  "status": "published",
+  "timestamp": {"$gte": 1704067200}
+}
+
+// Array field not in list (only for array-type fields)
+{"tags": {"$nin": ["draft", "template"]}}
+```
+
+**Important Limitations:**
+- **String fields require EXACT match** - No wildcards, partial matches, or substring searches
+- **Comma-separated strings**: If a field contains `"John Lakos, Herb Sutter"`, you cannot filter for just `"John Lakos"`
+  - You must match the entire string: `{"author": "John Lakos, Herb Sutter"}`
+  - To filter by individual authors, the data must be stored as an array field
+- **`$in` and `$nin` operators**: Only work on array-type fields, not comma-separated strings
+- Multiple conditions at the top level are combined with **AND** logic
+- Use comparison operators (`$gt`, `$gte`, `$lt`, `$lte`) for numeric and timestamp fields
+- Direct value assignment implies `$eq` (exact match)
+
+## How It Works
+
+1. **Namespace Discovery**: The `list_namespaces` tool queries your Pinecone index stats to discover available namespaces
+2. **Hybrid Search**: When querying, the tool searches both dense and sparse indexes in parallel
+3. **Result Merging**: Results from both indexes are merged and deduplicated
+4. **Reranking** (optional): The merged results are reranked using a semantic reranker for improved relevance
+
+## Development
+
+### Setup Development Environment
+
+```bash
+git clone https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript.git
+cd pinecone-read-only-mcp-typescript
+npm install
+```
+
+### Build
+
+```bash
+npm run build
+```
+
+### Run Tests
+
+```bash
+npm test
+```
+
+### Code Quality
+
+```bash
+# Run linting
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+
+# Check formatting
+npm run format:check
+
+# Format code
+npm run format
+
+# Type check
+npm run typecheck
+```
+
+### Development Server
+
+Run the server in development mode with auto-reload:
+
+```bash
+npm run dev -- --api-key YOUR_API_KEY
+```
+
+### Contribution Guidelines
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature-name`
+3. Make your changes and add tests
+4. Ensure all tests pass: `npm test`
+5. Ensure code quality checks pass: `npm run lint && npm run format:check && npm run typecheck`
+6. Commit your changes: `git commit -am 'Add some feature'`
+7. Push to the branch: `git push origin feature-name`
+8. Submit a pull request
+
+## Dependencies
+
+### Production Dependencies
+- [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk) - MCP SDK for TypeScript
+- [@pinecone-database/pinecone](https://www.npmjs.com/package/@pinecone-database/pinecone) - Pinecone client SDK
+- [zod](https://www.npmjs.com/package/zod) - TypeScript-first schema validation
+- [dotenv](https://www.npmjs.com/package/dotenv) - Environment variable management
+
+### Development Dependencies
+- [TypeScript](https://www.typescriptlang.org/) - Type-safe JavaScript
+- [ESLint](https://eslint.org/) - Code linting
+- [Prettier](https://prettier.io/) - Code formatting
+- [Vitest](https://vitest.dev/) - Testing framework
+
+## Comparison with Python Version
+
+This TypeScript implementation provides the same functionality as the [Python version](https://github.com/iTinkerBell/pinecone-read-only-mcp) with the following benefits:
+
+- Native Node.js integration
+- Better npm ecosystem integration
+- TypeScript type safety
+- Similar performance characteristics
+- Same API interface
+
+## Troubleshooting
+
+### API Key Issues
+
+If you see "Pinecone API key is required" error:
+1. Ensure `PINECONE_API_KEY` environment variable is set, OR
+2. Pass `--api-key` option when running the server
+
+### Index Not Found
+
+If you see index-related errors:
+1. Verify your index name is correct
+2. Ensure your API key has access to the index
+3. Check that both `your-index-name` and `your-index-name-sparse` indexes exist
+
+### Connection Issues
+
+If you experience connection issues:
+1. Check your internet connection
+2. Verify Pinecone service status
+3. Ensure firewall/proxy settings allow connections to Pinecone
+
+## License
+
+This project is licensed under the Boost Software License 1.0 - see the [LICENSE](LICENSE) file for details.
+
+## Authors
+
+- **Will Pak** - [cppalliance.org](https://cppalliance.org/)
+
+## Acknowledgements
+
+This project uses:
+- [Pinecone](https://www.pinecone.io/) for vector storage and retrieval
+- [Model Context Protocol](https://modelcontextprotocol.io/) for standardized AI integration
+- Hybrid search approach combining dense embeddings with sparse BM25-style retrieval
+
+## Related Projects
+
+- [Python version](https://github.com/iTinkerBell/pinecone-read-only-mcp) - Original Python implementation
+- [Pinecone MCP](https://github.com/pinecone-io/pinecone-mcp) - Full-featured Pinecone MCP with write capabilities
+
+## Support
+
+For issues and questions:
+- GitHub Issues: [https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/issues](https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/issues)
+- Email: will@cppalliance.org
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a list of changes in each version.

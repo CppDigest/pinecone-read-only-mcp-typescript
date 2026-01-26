@@ -1,0 +1,53 @@
+# Source files
+src/
+*.test.ts
+
+# Scripts (development only)
+scripts/
+
+# Configuration files
+tsconfig.json
+eslint.config.mjs
+.prettierrc
+vitest.config.ts
+.editorconfig
+.nvmrc
+.npmrc
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Documentation (keep only README and LICENSE)
+# README.md is included via files array
+# LICENSE is included via files array
+PUBLISHING.md
+*.md
+!README.md
+!CHANGELOG.md
+
+# Development
+node_modules/
+.vscode/
+.idea/
+dist/
+
+# Testing
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.*
+.env.example
+
+# Misc
+.DS_Store
+*.swp
+*.swo
+*~
+*.tgz
