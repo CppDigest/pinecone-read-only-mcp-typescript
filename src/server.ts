@@ -18,6 +18,22 @@ import {
 } from './constants.js';
 import type { QueryResponse } from './types.js';
 
+// Recursive Zod schema for Pinecone metadata filters
+// Supports nested objects with operators like {"timestamp": {"$gte": 123}}
+// Using z.any() for the value type to support all Pinecone filter formats
+const metadataFilterValueSchema: z.ZodType<any> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.array(z.string()),
+    z.array(z.number()),
+    z.record(z.string(), metadataFilterValueSchema), // Recursive for nested operators
+  ])
+);
+
+const metadataFilterSchema = z.record(z.string(), metadataFilterValueSchema);
+
 // Global Pinecone client (initialized lazily)
 let pineconeClient: PineconeClient | null = null;
 
@@ -131,7 +147,7 @@ export async function setupServer(): Promise<McpServer> {
             'Whether to use semantic reranking for better relevance. Slower but more accurate. Default: true'
           ),
         metadata_filter: z
-          .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+          .record(z.string(), metadataFilterSchema)
           .optional()
           .describe(
             'Optional metadata filter to narrow down search results. Use exact field names from list_namespaces. ' +
@@ -170,6 +186,11 @@ export async function setupServer(): Promise<McpServer> {
           };
         }
 
+        // Log filter for debugging
+        if (metadata_filter) {
+          console.error('Received metadata filter:', JSON.stringify(metadata_filter, null, 2));
+        }
+
         const client = getPineconeClient();
         const results = await client.query({
           query: query_text.trim(),
@@ -191,6 +212,7 @@ export async function setupServer(): Promise<McpServer> {
           content: doc.content.substring(0, 2000), // Truncate for readability
           score: Math.round(doc.score * 10000) / 10000,
           reranked: doc.reranked,
+          metadata: doc.metadata, // Include all metadata fields (including timestamp)
         }));
 
         const response: QueryResponse = {
