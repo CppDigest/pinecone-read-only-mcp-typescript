@@ -98,7 +98,8 @@ export async function setupServer(): Promise<McpServer> {
 
         const response = {
           status: 'error',
-          message: process.env.LOG_LEVEL === 'DEBUG' ? errorMessage : 'Failed to list namespaces',
+          message:
+            process.env['LOG_LEVEL'] === 'DEBUG' ? errorMessage : 'Failed to list namespaces',
         };
 
         return {
@@ -203,12 +204,12 @@ export async function setupServer(): Promise<McpServer> {
         // Format results for output
         const formattedResults = results.map((doc) => ({
           paper_number:
-            doc.metadata.document_number ||
-            (doc.metadata.filename as string)?.replace('.md', '').toUpperCase() ||
+            doc.metadata['document_number'] ||
+            (doc.metadata['filename'] as string)?.replace('.md', '').toUpperCase() ||
             null,
-          title: doc.metadata.title || '',
-          author: doc.metadata.author || '',
-          url: doc.metadata.url || '',
+          title: doc.metadata['title'] || '',
+          author: doc.metadata['author'] || '',
+          url: doc.metadata['url'] || '',
           content: doc.content.substring(0, 2000), // Truncate for readability
           score: Math.round(doc.score * 10000) / 10000,
           reranked: doc.reranked,
@@ -239,7 +240,7 @@ export async function setupServer(): Promise<McpServer> {
         const response: QueryResponse = {
           status: 'error',
           message:
-            process.env.LOG_LEVEL === 'DEBUG'
+            process.env['LOG_LEVEL'] === 'DEBUG'
               ? errorMessage
               : 'An error occurred while processing your query',
         };

@@ -1,6 +1,6 @@
 {
   "name": "@will-cppa/pinecone-read-only-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A Model Context Protocol (MCP) server that provides semantic search over Pinecone vector databases using hybrid search (dense + sparse) with reranking.",
   "type": "module",
   "main": "dist/index.js",
@@ -36,7 +36,7 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "node ./node_modules/typescript/bin/tsc || exit 0",
+    "build": "tsc",
     "build:watch": "tsc --watch",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",

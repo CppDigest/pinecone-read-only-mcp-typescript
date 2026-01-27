@@ -26,11 +26,11 @@ export class PineconeClient {
 
   constructor(config: PineconeClientConfig) {
     this.apiKey = config.apiKey;
-    this.indexName = config.indexName || process.env.PINECONE_INDEX_NAME || DEFAULT_INDEX_NAME;
+    this.indexName = config.indexName || process.env['PINECONE_INDEX_NAME'] || DEFAULT_INDEX_NAME;
     this.rerankModel =
-      config.rerankModel || process.env.PINECONE_RERANK_MODEL || DEFAULT_RERANK_MODEL;
+      config.rerankModel || process.env['PINECONE_RERANK_MODEL'] || DEFAULT_RERANK_MODEL;
     this.defaultTopK =
-      config.defaultTopK || parseInt(process.env.PINECONE_TOP_K || String(DEFAULT_TOP_K));
+      config.defaultTopK || parseInt(process.env['PINECONE_TOP_K'] || String(DEFAULT_TOP_K));
   }
 
   /**
@@ -254,10 +254,10 @@ export class PineconeClient {
       for (const item of rerankResult.data || []) {
         const document = item.document || {};
         reranked.push({
-          id: document._id || '',
-          content: document.chunk_text || '',
+          id: document['_id'] || '',
+          content: document['chunk_text'] || '',
           score: parseFloat(String(item.score || 0)),
-          metadata: document.metadata || {},
+          metadata: document['metadata'] || {},
           reranked: true,
         });
       }

@@ -99,13 +99,13 @@ async function main(): Promise<void> {
     // Set log level
     const logLevel =
       options.logLevel ||
-      process.env.PINECONE_READ_ONLY_MCP_LOG_LEVEL ||
-      process.env.LOG_LEVEL ||
+      process.env['PINECONE_READ_ONLY_MCP_LOG_LEVEL'] ||
+      process.env['LOG_LEVEL'] ||
       'INFO';
-    process.env.LOG_LEVEL = logLevel;
+    process.env['LOG_LEVEL'] = logLevel;
 
     // Get API key
-    const apiKey = options.apiKey || process.env.PINECONE_API_KEY;
+    const apiKey = options.apiKey || process.env['PINECONE_API_KEY'];
     if (!apiKey) {
       console.error(
         'Error: Pinecone API key is required. Set PINECONE_API_KEY environment variable or use --api-key option.'
@@ -114,9 +114,9 @@ async function main(): Promise<void> {
     }
 
     // Get configuration
-    const indexName = options.indexName || process.env.PINECONE_INDEX_NAME || DEFAULT_INDEX_NAME;
+    const indexName = options.indexName || process.env['PINECONE_INDEX_NAME'] || DEFAULT_INDEX_NAME;
     const rerankModel =
-      options.rerankModel || process.env.PINECONE_RERANK_MODEL || DEFAULT_RERANK_MODEL;
+      options.rerankModel || process.env['PINECONE_RERANK_MODEL'] || DEFAULT_RERANK_MODEL;
 
     // Initialize Pinecone client
     const client = new PineconeClient({
