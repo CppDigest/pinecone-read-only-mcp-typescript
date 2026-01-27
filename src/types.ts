@@ -62,6 +62,7 @@ export interface QueryResponse {
     content: string;
     score: number;
     reranked: boolean;
+    metadata?: Record<string, any>; // Include all metadata fields
   }>;
   message?: string;
 }
