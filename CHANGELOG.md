@@ -54,6 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Environment variable support
 - Full documentation and examples
 
-[Unreleased]: https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/releases/tag/v0.1.0
+[Unreleased]: https://github.com/CppDigest/pinecone-read-only-mcp-typescript/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/CppDigest/pinecone-read-only-mcp-typescript/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/CppDigest/pinecone-read-only-mcp-typescript/releases/tag/v0.1.0
