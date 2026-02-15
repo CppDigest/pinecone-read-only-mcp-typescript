@@ -58,12 +58,12 @@ The server requires a Pinecone API key and supports the following configuration 
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `PINECONE_API_KEY` | Yes | - | Your Pinecone API key |
-| `PINECONE_INDEX_NAME` | No | `rag-hybrid` | Pinecone index name |
-| `PINECONE_RERANK_MODEL` | No | `bge-reranker-v2-m3` | Reranking model |
-| `PINECONE_READ_ONLY_MCP_LOG_LEVEL` | No | `INFO` | Logging level |
+| Variable                           | Required | Default              | Description           |
+| ---------------------------------- | -------- | -------------------- | --------------------- |
+| `PINECONE_API_KEY`                 | Yes      | -                    | Your Pinecone API key |
+| `PINECONE_INDEX_NAME`              | No       | `rag-hybrid`         | Pinecone index name   |
+| `PINECONE_RERANK_MODEL`            | No       | `bge-reranker-v2-m3` | Reranking model       |
+| `PINECONE_READ_ONLY_MCP_LOG_LEVEL` | No       | `INFO`               | Logging level         |
 
 ### Claude Desktop Configuration
 
@@ -93,9 +93,12 @@ Or with explicit options:
       "args": [
         "-y",
         "@will-cppa/pinecone-read-only-mcp",
-        "--api-key", "your-api-key-here",
-        "--index-name", "your-index-name",
-        "--rerank-model", "bge-reranker-v2-m3"
+        "--api-key",
+        "your-api-key-here",
+        "--index-name",
+        "your-index-name",
+        "--rerank-model",
+        "bge-reranker-v2-m3"
       ]
     }
   }
@@ -147,6 +150,48 @@ node node_modules/@will-cppa/pinecone-read-only-mcp/dist/index.js --api-key YOUR
 --help, -h            Show help message
 ```
 
+## Deployment
+
+### Production Readiness Defaults
+
+- Build now **fails fast** on TypeScript errors (`npm run build` no longer suppresses failures).
+- CI validates typecheck, lint, format, build, smoke run, tests, and package dry-run.
+- `list_namespaces` data is cached in-memory for 30 minutes to reduce repeated Pinecone calls.
+- Query/count flow has guardrails (`suggest_query_params` before execution) to prevent wasteful calls.
+
+### Deploy with npm Package
+
+```bash
+# install
+npm i @will-cppa/pinecone-read-only-mcp
+
+# run
+npx @will-cppa/pinecone-read-only-mcp --api-key YOUR_API_KEY
+```
+
+### Deploy with Docker
+
+```bash
+# build image
+docker build -t pinecone-read-only-mcp:latest .
+
+# run (stdio MCP server)
+docker run --rm -i \
+  -e PINECONE_API_KEY=YOUR_API_KEY \
+  -e PINECONE_INDEX_NAME=rag-hybrid \
+  pinecone-read-only-mcp:latest
+```
+
+### Release Gate (recommended)
+
+Before tagging/releasing:
+
+```bash
+npm run release:check
+```
+
+This runs full CI-equivalent checks and validates publish contents with `npm pack --dry-run`.
+
 ## API Documentation
 
 The server exposes the following tools via MCP:
@@ -159,7 +204,11 @@ Discovers and lists all available namespaces in the configured Pinecone index, i
 
 **Returns:** JSON object with namespace details including available metadata fields
 
+`metadata_fields` values represent inferred field types from sampled records. Common values include:
+`string`, `number`, `boolean`, `string[]`, and `array`.
+
 **Example response:**
+
 ```json
 {
   "status": "success",
@@ -186,29 +235,134 @@ Discovers and lists all available namespaces in the configured Pinecone index, i
 }
 ```
 
-### `query`
+### `suggest_query_params`
 
-Performs hybrid semantic search over the specified namespace in the Pinecone index with optional metadata filtering.
+Suggests which **fields** to request and which tool to use (`count`, `query_fast`, or `query_detailed`), based on the namespace’s schema (from `list_namespaces`) and the user’s natural language query. This is a mandatory flow step before `count`/`query` tools.
 
 **Parameters:**
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `query_text` | string | Yes | - | Search query text |
-| `namespace` | string | Yes | - | Namespace to search (use `list_namespaces` to discover) |
-| `top_k` | integer | No | `10` | Number of results (1-100) |
-| `use_reranking` | boolean | No | `true` | Enable semantic reranking |
-| `metadata_filter` | object | No | - | Metadata filter to narrow results (e.g., `{"author": "John", "year": 2023}`) |
+| Parameter    | Type   | Required | Description                                                                                     |
+| ------------ | ------ | -------- | ----------------------------------------------------------------------------------------------- |
+| `namespace`  | string | Yes      | Namespace to query (must match a name from `list_namespaces`)                                   |
+| `user_query` | string | Yes      | User’s question or intent (e.g. "list papers by Lakos with titles", "how many papers by Wong?") |
 
-**Returns:** JSON object with search results including content, relevance scores, and metadata
+**Returns:** `suggested_fields` (only fields that exist in that namespace), `use_count_tool`, `recommended_tool`, `explanation`, and `namespace_found`.
 
 **Example response:**
+
+```json
+{
+  "status": "success",
+  "suggested_fields": ["document_number", "title", "url", "author"],
+  "use_count_tool": false,
+  "recommended_tool": "query_fast",
+  "explanation": "User asked for a list or browse; use minimal fields (no chunk_text) for smaller payload and cost.",
+  "namespace_found": true
+}
+```
+
+Use `suggested_fields` as the `fields` parameter when calling query tools.
+
+### `guided_query`
+
+Single orchestrator tool that runs the full flow in one call:
+
+1. namespace routing (if namespace is omitted),
+2. query param suggestion,
+3. execution via `count`, `query_fast`, or `query_detailed`.
+
+It returns both the final result and a `decision_trace` for transparency.
+
+**Parameters:**
+
+| Parameter         | Type    | Required | Default | Description                                                                         |
+| ----------------- | ------- | -------- | ------- | ----------------------------------------------------------------------------------- |
+| `user_query`      | string  | Yes      | -       | User question/intent                                                                |
+| `namespace`       | string  | No       | -       | Optional explicit namespace                                                         |
+| `metadata_filter` | object  | No       | -       | Optional metadata filter                                                            |
+| `top_k`           | integer | No       | `10`    | Query result size for query paths (1-100)                                           |
+| `preferred_tool`  | enum    | No       | `auto`  | One of `auto`, `count`, `query_fast`, `query_detailed`                              |
+| `enrich_urls`     | boolean | No       | `true`  | Auto-generate URLs for `mailing` and `slack-Cpplang` when `metadata.url` is missing |
+
+**Returns:** JSON containing `decision_trace` and `result`.
+
+### `generate_urls`
+
+Generates URLs for retrieved records when metadata does not contain `url` and URL is required.
+
+Supported namespaces:
+
+- `mailing`
+- `slack-Cpplang`
+
+Rules:
+
+- **`mailing`**: uses `doc_id` or `thread_id`  
+  Format: `https://lists.boost.org/archives/list/{doc_id_or_thread_id}/`
+- **`slack-Cpplang`**: prefer `source` directly if present; otherwise use `team_id`, `channel_id`, and `doc_id`  
+  `message_id = doc_id.replace('.', '')`  
+  Format: `https://app.slack.com/{team_id}/{channel_id}/p{message_id}`
+
+**Parameters:**
+
+| Parameter   | Type   | Required | Description                                                                                   |
+| ----------- | ------ | -------- | --------------------------------------------------------------------------------------------- |
+| `namespace` | string | Yes      | Namespace for URL-generation logic                                                            |
+| `records`   | array  | Yes      | Retrieved records; each item can be either metadata itself or an object with `metadata` field |
+
+**Returns:** Per-record generated URL, generation method, and reason if unavailable.
+
+### `count`
+
+Returns the **unique document count** matching a metadata filter and semantic query. Use for questions like "how many papers by Lakos?" instead of the `query` tool. For performance, the count tool uses **semantic (dense) search only** (no hybrid or lexical) and requests only document identifiers (`document_number`, `url`, `doc_id`)—no chunk content—then deduplicates by document.
+
+**Parameters:**
+
+| Parameter         | Type   | Required | Description                                                                                  |
+| ----------------- | ------ | -------- | -------------------------------------------------------------------------------------------- |
+| `namespace`       | string | Yes      | Namespace to count in (use `list_namespaces` to discover)                                    |
+| `query_text`      | string | Yes      | Search query; use a broad term (e.g. `"paper"`, `"document"`) when counting by metadata only |
+| `metadata_filter` | object | No       | Same operators as `query` (e.g. `{"author": {"$in": ["John Lakos"]}}` for wg21-papers)       |
+
+**Returns:** JSON with `count` (unique documents, up to 10,000), and `truncated: true` if there are at least 10,000 matches.
+
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "count": 42,
+  "truncated": false,
+  "namespace": "wg21-papers",
+  "metadata_filter": { "author": { "$in": ["John Lakos"] } }
+}
+```
+
+### `query`
+
+Performs hybrid semantic search over the specified namespace in the Pinecone index with optional metadata filtering. For **count** questions, use the `count` tool instead.
+
+**Parameters:**
+
+| Parameter         | Type     | Required | Default | Description                                                                                                                                          |
+| ----------------- | -------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `query_text`      | string   | Yes      | -       | Search query text                                                                                                                                    |
+| `namespace`       | string   | Yes      | -       | Namespace to search (use `list_namespaces` to discover)                                                                                              |
+| `top_k`           | integer  | No       | `10`    | Number of results (1-100)                                                                                                                            |
+| `use_reranking`   | boolean  | No       | `true`  | Enable semantic reranking                                                                                                                            |
+| `metadata_filter` | object   | No       | -       | Metadata filter to narrow results (e.g., `{"author": "John", "year": 2023}`)                                                                         |
+| `fields`          | string[] | No       | -       | Field names to return (e.g. `["document_number", "title", "url"]`). Omit for all fields; include `chunk_text` for content. Reduces payload and cost. |
+
+**Returns:** JSON object with search results (only requested fields when `fields` is set), relevance scores, and metadata
+
+**Example response:**
+
 ```json
 {
   "status": "success",
   "query": "your search query",
   "namespace": "namespace1",
-  "metadata_filter": {"author": "John Doe"},
+  "metadata_filter": { "author": "John Doe" },
   "result_count": 10,
   "results": [
     {
@@ -230,16 +384,16 @@ Metadata filters allow you to narrow down search results based on document prope
 
 **Supported Operators (10 total):**
 
-| Operator | Syntax | Description | Example |
-|----------|--------|-------------|---------|
-| Equal | `$eq` or value directly | Exact match | `{"status": "published"}` or `{"status": {"$eq": "published"}}` |
-| Not Equal | `$ne` | Not equal to | `{"status": {"$ne": "draft"}}` |
-| Greater Than | `$gt` | Greater than | `{"year": {"$gt": 2022}}` |
-| Greater Than or Equal | `$gte` | Greater than or equal | `{"timestamp": {"$gte": 1704067200}}` |
-| Less Than | `$lt` | Less than | `{"score": {"$lt": 0.5}}` |
-| Less Than or Equal | `$lte` | Less than or equal | `{"priority": {"$lte": 3}}` |
-| In Array | `$in` | Value is in array field | `{"tags": {"$in": ["cpp", "contracts"]}}` (only for array-type fields) |
-| Not In Array | `$nin` | Value not in array field | `{"tags": {"$nin": ["draft", "archived"]}}` (only for array-type fields) |
+| Operator              | Syntax                  | Description              | Example                                                                  |
+| --------------------- | ----------------------- | ------------------------ | ------------------------------------------------------------------------ |
+| Equal                 | `$eq` or value directly | Exact match              | `{"status": "published"}` or `{"status": {"$eq": "published"}}`          |
+| Not Equal             | `$ne`                   | Not equal to             | `{"status": {"$ne": "draft"}}`                                           |
+| Greater Than          | `$gt`                   | Greater than             | `{"year": {"$gt": 2022}}`                                                |
+| Greater Than or Equal | `$gte`                  | Greater than or equal    | `{"timestamp": {"$gte": 1704067200}}`                                    |
+| Less Than             | `$lt`                   | Less than                | `{"score": {"$lt": 0.5}}`                                                |
+| Less Than or Equal    | `$lte`                  | Less than or equal       | `{"priority": {"$lte": 3}}`                                              |
+| In Array              | `$in`                   | Value is in array field  | `{"tags": {"$in": ["cpp", "contracts"]}}` (only for array-type fields)   |
+| Not In Array          | `$nin`                  | Value not in array field | `{"tags": {"$nin": ["draft", "archived"]}}` (only for array-type fields) |
 
 **Filter Examples:**
 
@@ -275,11 +429,14 @@ Metadata filters allow you to narrow down search results based on document prope
 ```
 
 **Important Limitations:**
+
 - **String fields require EXACT match** - No wildcards, partial matches, or substring searches
 - **Comma-separated strings**: If a field contains `"John Lakos, Herb Sutter"`, you cannot filter for just `"John Lakos"`
   - You must match the entire string: `{"author": "John Lakos, Herb Sutter"}`
   - To filter by individual authors, the data must be stored as an array field
 - **`$in` and `$nin` operators**: Only work on array-type fields, not comma-separated strings
+- **Unsupported operators are rejected**: Unknown operators (for example `$regex`) return a validation error
+- **`$in` and `$nin` must use arrays**: `{"tags": {"$in": "cpp"}}` is invalid; use `{"tags": {"$in": ["cpp"]}}`
 - Multiple conditions at the top level are combined with **AND** logic
 - Use comparison operators (`$gt`, `$gte`, `$lt`, `$lte`) for numeric and timestamp fields
 - Direct value assignment implies `$eq` (exact match)
@@ -354,12 +511,14 @@ npm run dev -- --api-key YOUR_API_KEY
 ## Dependencies
 
 ### Production Dependencies
+
 - [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk) - MCP SDK for TypeScript
 - [@pinecone-database/pinecone](https://www.npmjs.com/package/@pinecone-database/pinecone) - Pinecone client SDK
 - [zod](https://www.npmjs.com/package/zod) - TypeScript-first schema validation
 - [dotenv](https://www.npmjs.com/package/dotenv) - Environment variable management
 
 ### Development Dependencies
+
 - [TypeScript](https://www.typescriptlang.org/) - Type-safe JavaScript
 - [ESLint](https://eslint.org/) - Code linting
 - [Prettier](https://prettier.io/) - Code formatting
@@ -380,12 +539,14 @@ This TypeScript implementation provides the same functionality as the [Python ve
 ### API Key Issues
 
 If you see "Pinecone API key is required" error:
+
 1. Ensure `PINECONE_API_KEY` environment variable is set, OR
 2. Pass `--api-key` option when running the server
 
 ### Index Not Found
 
 If you see index-related errors:
+
 1. Verify your index name is correct
 2. Ensure your API key has access to the index
 3. Check that both `your-index-name` and `your-index-name-sparse` indexes exist
@@ -393,6 +554,7 @@ If you see index-related errors:
 ### Connection Issues
 
 If you experience connection issues:
+
 1. Check your internet connection
 2. Verify Pinecone service status
 3. Ensure firewall/proxy settings allow connections to Pinecone
@@ -408,6 +570,7 @@ This project is licensed under the Boost Software License 1.0 - see the [LICENSE
 ## Acknowledgements
 
 This project uses:
+
 - [Pinecone](https://www.pinecone.io/) for vector storage and retrieval
 - [Model Context Protocol](https://modelcontextprotocol.io/) for standardized AI integration
 - Hybrid search approach combining dense embeddings with sparse BM25-style retrieval
@@ -420,6 +583,7 @@ This project uses:
 ## Support
 
 For issues and questions:
+
 - GitHub Issues: [https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/issues](https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/issues)
 - Email: will@cppalliance.org
 

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Initial TypeScript implementation of Pinecone Read-Only MCP
 - Hybrid search support (dense + sparse embeddings)
 - Semantic reranking using BGE reranker model
@@ -20,23 +21,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Complete documentation
 
 ### Changed
+
 - N/A
 
 ### Deprecated
+
 - N/A
 
 ### Removed
+
 - N/A
 
 ### Fixed
+
 - N/A
 
 ### Security
+
 - N/A
 
 ## [0.1.0] - 2026-01-26
 
 ### Added
+
 - Initial release of TypeScript version
 - Feature parity with Python version
 - Production-ready implementation with:

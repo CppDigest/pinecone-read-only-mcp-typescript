@@ -38,6 +38,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Smoke test CLI
+        run: npm run smoke
+
       - name: Run tests
         run: npm test
 
@@ -58,3 +61,6 @@ jobs:
       - name: Security audit
         run: npm audit --audit-level=moderate
         continue-on-error: true
+
+      - name: Package dry run
+        run: npm pack --dry-run

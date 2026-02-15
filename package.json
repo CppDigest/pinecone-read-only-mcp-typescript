@@ -36,10 +36,12 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "node ./node_modules/typescript/bin/tsc || exit 0",
+    "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true});\"",
+    "build": "npm run clean && node ./node_modules/typescript/bin/tsc",
     "build:watch": "tsc --watch",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
+    "smoke": "npm run build && node dist/index.js --help",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:search": "tsx scripts/test-search.ts",
@@ -50,6 +52,7 @@
     "format:check": "prettier --check \"src/**/*.ts\" \"*.json\" \".prettierrc\"",
     "typecheck": "tsc --noEmit",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run build && npm test",
+    "release:check": "npm run ci && npm pack --dry-run",
     "ci:local": "bash scripts/ci-local.sh",
     "prepublishOnly": "npm run ci",
     "prepack": "npm run build"

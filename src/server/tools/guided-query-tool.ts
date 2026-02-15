@@ -1,0 +1,221 @@
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
+import { FAST_QUERY_FIELDS, MAX_TOP_K, MIN_TOP_K } from '../../constants.js';
+import type { PineconeMetadataValue, QueryResponse, SearchResult } from '../../types.js';
+import { getPineconeClient } from '../client-context.js';
+import { metadataFilterSchema, validateMetadataFilter } from '../metadata-filter.js';
+import { rankNamespacesByQuery } from '../namespace-router.js';
+import { getNamespacesWithCache } from '../namespaces-cache.js';
+import { suggestQueryParams } from '../query-suggestion.js';
+import { markSuggested } from '../suggestion-flow.js';
+import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
+import { generateUrlForNamespace } from '../url-generation.js';
+
+type GuidedToolName = 'count' | 'query_fast' | 'query_detailed';
+
+function formatQueryResponse(
+  queryText: string,
+  namespace: string,
+  metadataFilter: Record<string, unknown> | undefined,
+  fields: string[] | undefined,
+  mode: 'query_fast' | 'query_detailed',
+  results: SearchResult[],
+  enrichUrls: boolean
+): QueryResponse {
+  const formattedResults = results.map((doc) => {
+    const metadata = { ...doc.metadata } as Record<string, PineconeMetadataValue>;
+    if (enrichUrls) {
+      const generated = generateUrlForNamespace(namespace, metadata);
+      if (generated.url && typeof metadata.url !== 'string') {
+        metadata.url = generated.url;
+      }
+    }
+    const docNum = metadata.document_number;
+    const filename = metadata.filename;
+    const paper_number =
+      (typeof docNum === 'string' ? docNum : null) ??
+      (typeof filename === 'string' ? filename.replace('.md', '').toUpperCase() : null) ??
+      null;
+    return {
+      paper_number,
+      title: String(metadata.title ?? ''),
+      author: String(metadata.author ?? ''),
+      url: String(metadata.url ?? ''),
+      content: doc.content.substring(0, 2000),
+      score: Math.round(doc.score * 10000) / 10000,
+      reranked: doc.reranked,
+      metadata,
+    };
+  });
+
+  return {
+    status: 'success',
+    mode,
+    query: queryText,
+    namespace,
+    metadata_filter: metadataFilter,
+    result_count: formattedResults.length,
+    ...(fields?.length ? { fields } : {}),
+    results: formattedResults,
+  };
+}
+
+export function registerGuidedQueryTool(server: McpServer): void {
+  server.registerTool(
+    'guided_query',
+    {
+      description:
+        'Single orchestrator that runs routing + suggestion + execution in one call. ' +
+        'Flow: optional namespace_router logic -> suggest_query_params logic -> executes count/query_fast/query_detailed. ' +
+        'Returns decision_trace so behavior stays transparent and debuggable.',
+      inputSchema: {
+        user_query: z.string().describe('User question or intent.'),
+        namespace: z
+          .string()
+          .optional()
+          .describe('Optional explicit namespace. If omitted, namespace_router logic will choose one.'),
+        metadata_filter: metadataFilterSchema
+          .optional()
+          .describe('Optional metadata filter to constrain results.'),
+        top_k: z
+          .number()
+          .int()
+          .min(MIN_TOP_K)
+          .max(MAX_TOP_K)
+          .default(10)
+          .describe('Result count for query_fast/query_detailed paths (1-100).'),
+        preferred_tool: z
+          .enum(['auto', 'count', 'query_fast', 'query_detailed'])
+          .default('auto')
+          .describe('Optional override. Use auto to follow suggestion logic.'),
+        enrich_urls: z
+          .boolean()
+          .default(true)
+          .describe(
+            'If true, enrich result URLs for mailing/slack-Cpplang when metadata.url is missing.'
+          ),
+      },
+    },
+    async (params) => {
+      try {
+        const {
+          user_query,
+          namespace: inputNamespace,
+          metadata_filter,
+          top_k = 10,
+          preferred_tool = 'auto',
+          enrich_urls = true,
+        } = params;
+
+        if (!user_query?.trim()) {
+          return jsonErrorResponse({ status: 'error', message: 'user_query cannot be empty' });
+        }
+
+        if (metadata_filter) {
+          const err = validateMetadataFilter(metadata_filter);
+          if (err) {
+            return jsonErrorResponse({ status: 'error', message: err });
+          }
+        }
+
+        const queryText = user_query.trim();
+        const { data: namespaces, cache_hit } = await getNamespacesWithCache();
+        const ranked = rankNamespacesByQuery(queryText, namespaces, 3);
+
+        const namespace = inputNamespace ?? ranked[0]?.namespace;
+        if (!namespace) {
+          return jsonErrorResponse({
+            status: 'error',
+            message: 'No namespace available. Please run list_namespaces and verify index data.',
+          });
+        }
+
+        const ns = namespaces.find((n) => n.namespace === namespace);
+        const suggestion = suggestQueryParams(ns?.metadata ?? null, queryText);
+        if (!suggestion.namespace_found) {
+          return jsonErrorResponse({
+            status: 'error',
+            message: `Namespace "${namespace}" not found in cached namespaces. Call list_namespaces and retry.`,
+          });
+        }
+
+        const selectedTool: GuidedToolName =
+          preferred_tool === 'auto' ? suggestion.recommended_tool : preferred_tool;
+        markSuggested(namespace, {
+          recommended_tool: selectedTool,
+          suggested_fields: suggestion.suggested_fields,
+          user_query: queryText,
+        });
+
+        const client = getPineconeClient();
+        const decision_trace = {
+          cache_hit,
+          input_namespace: inputNamespace ?? null,
+          routed_namespace: ranked[0]?.namespace ?? null,
+          selected_namespace: namespace,
+          ranked_namespaces: ranked,
+          suggested_fields: suggestion.suggested_fields,
+          suggested_tool: suggestion.recommended_tool,
+          selected_tool: selectedTool,
+          explanation: suggestion.explanation,
+          enrich_urls,
+        };
+
+        if (selectedTool === 'count') {
+          const { count, truncated } = await client.count({
+            query: queryText,
+            namespace,
+            metadataFilter: metadata_filter,
+          });
+          return jsonResponse({
+            status: 'success',
+            decision_trace,
+            result: {
+              tool: 'count',
+              namespace,
+              query: queryText,
+              metadata_filter,
+              count,
+              truncated,
+            },
+          });
+        }
+
+        const isFast = selectedTool === 'query_fast';
+        const fields =
+          suggestion.suggested_fields.length > 0
+            ? suggestion.suggested_fields
+            : [...FAST_QUERY_FIELDS];
+        const queryResults = await client.query({
+          query: queryText,
+          namespace,
+          topK: top_k,
+          metadataFilter: metadata_filter,
+          useReranking: !isFast,
+          fields,
+        });
+        const result = formatQueryResponse(
+          queryText,
+          namespace,
+          metadata_filter,
+          fields,
+          isFast ? 'query_fast' : 'query_detailed',
+          queryResults,
+          enrich_urls
+        );
+        return jsonResponse({
+          status: 'success',
+          decision_trace,
+          result,
+        });
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error('Error in guided_query tool:', error);
+        return jsonErrorResponse({
+          status: 'error',
+          message: process.env.LOG_LEVEL === 'DEBUG' ? msg : 'Failed to execute guided query',
+        });
+      }
+    }
+  );
+}

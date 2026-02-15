@@ -7,8 +7,43 @@
  */
 
 import { Pinecone } from '@pinecone-database/pinecone';
-import type { PineconeClientConfig, SearchResult, PineconeHit, QueryParams } from './types.js';
-import { DEFAULT_INDEX_NAME, DEFAULT_RERANK_MODEL, DEFAULT_TOP_K, MAX_TOP_K } from './constants.js';
+import type {
+  PineconeClientConfig,
+  SearchResult,
+  PineconeHit,
+  QueryParams,
+  CountParams,
+  CountResult,
+  MergedHit,
+  SearchableIndex,
+  PineconeMetadataValue,
+} from './types.js';
+import {
+  DEFAULT_INDEX_NAME,
+  DEFAULT_RERANK_MODEL,
+  DEFAULT_TOP_K,
+  MAX_TOP_K,
+  COUNT_TOP_K,
+  COUNT_FIELDS,
+} from './constants.js';
+
+/**
+ * Infers a human-readable metadata field type for namespace discovery.
+ * Distinguishes Pinecone-supported list type (string[]) from other arrays.
+ */
+function inferMetadataFieldType(value: unknown): string {
+  if (value === null || value === undefined) {
+    return 'unknown';
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return 'array';
+    if (value.every((item) => typeof item === 'string')) return 'string[]';
+    return 'array';
+  }
+  const t = typeof value;
+  if (t === 'string' || t === 'number' || t === 'boolean') return t;
+  return 'object';
+}
 
 export class PineconeClient {
   private apiKey: string;
@@ -18,10 +53,8 @@ export class PineconeClient {
 
   // Lazy initialization
   private pc: Pinecone | null = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private denseIndex: any = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private sparseIndex: any = null;
+  private denseIndex: SearchableIndex | null = null;
+  private sparseIndex: SearchableIndex | null = null;
   private initialized = false;
 
   constructor(config: PineconeClientConfig) {
@@ -52,9 +85,8 @@ export class PineconeClient {
   /**
    * Ensure Pinecone indexes are initialized and return them
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async ensureIndexes(): Promise<{ denseIndex: any; sparseIndex: any }> {
-    if (this.initialized) {
+  private async ensureIndexes(): Promise<{ denseIndex: SearchableIndex; sparseIndex: SearchableIndex }> {
+    if (this.initialized && this.denseIndex !== null && this.sparseIndex !== null) {
       return { denseIndex: this.denseIndex, sparseIndex: this.sparseIndex };
     }
 
@@ -62,12 +94,14 @@ export class PineconeClient {
     const denseName = this.indexName;
     const sparseName = `${this.indexName}-sparse`;
 
-    this.denseIndex = pc.index(denseName);
-    this.sparseIndex = pc.index(sparseName);
+    const dense = pc.index(denseName) as unknown as SearchableIndex;
+    const sparse = pc.index(sparseName) as unknown as SearchableIndex;
+    this.denseIndex = dense;
+    this.sparseIndex = sparse;
     this.initialized = true;
 
     console.error(`Connected to indexes: ${denseName} and ${sparseName}`);
-    return { denseIndex: this.denseIndex, sparseIndex: this.sparseIndex };
+    return { denseIndex: dense, sparseIndex: sparse };
   }
 
   /**
@@ -87,7 +121,7 @@ export class PineconeClient {
       const { denseIndex } = await this.ensureIndexes();
 
       // Get index stats to find namespaces
-      const stats = await denseIndex.describeIndexStats();
+      const stats = denseIndex.describeIndexStats ? await denseIndex.describeIndexStats() : undefined;
       const namespaces = stats?.namespaces ? Object.keys(stats.namespaces) : [];
 
       console.error(`Found ${namespaces.length} namespace(s)`);
@@ -96,27 +130,36 @@ export class PineconeClient {
       const namespacesInfo = await Promise.all(
         namespaces.map(async (ns: string) => {
           try {
-            const recordCount = stats.namespaces?.[ns]?.recordCount || 0;
+            const recordCount = stats?.namespaces?.[ns]?.recordCount || 0;
             const metadataFields: Record<string, string> = {};
 
             // Sample a few records to discover metadata fields
-            if (recordCount > 0) {
+            if (recordCount > 0 && denseIndex.namespace) {
               try {
-                const nsObj = denseIndex.namespace(ns);
-                // Query with a dummy vector to get some sample records
-                const sampleQuery = await nsObj.query({
-                  topK: 5,
-                  vector: Array(stats.dimension || 1536).fill(0),
-                  includeMetadata: true,
-                });
+                const nsObj = denseIndex.namespace(ns) as { query: (opts: { topK: number; vector: number[]; includeMetadata: boolean }) => Promise<{ matches?: Array<{ metadata?: Record<string, unknown> }> }> } | null;
+                const sampleQuery =
+                  nsObj && typeof nsObj.query === 'function'
+                    ? await nsObj.query({
+                        topK: 5,
+                        vector: Array((stats?.dimension ?? 1536)).fill(0),
+                        includeMetadata: true,
+                      })
+                    : { matches: undefined };
 
-                // Collect unique metadata fields and infer types
+                // Collect unique metadata fields and infer types (including string[])
                 if (sampleQuery?.matches) {
-                  sampleQuery.matches.forEach((match: any) => {
+                  sampleQuery.matches.forEach((match: { metadata?: Record<string, unknown> }) => {
                     if (match.metadata) {
                       Object.entries(match.metadata).forEach(([key, value]) => {
+                        const inferredType = inferMetadataFieldType(value);
                         if (!(key in metadataFields)) {
-                          metadataFields[key] = typeof value;
+                          metadataFields[key] = inferredType;
+                        } else if (
+                          metadataFields[key] === 'object' &&
+                          inferredType === 'string[]'
+                        ) {
+                          // Prefer array type over generic object when we see it in another sample
+                          metadataFields[key] = inferredType;
                         }
                       });
                     }
@@ -151,40 +194,66 @@ export class PineconeClient {
   }
 
   /**
-   * Search a Pinecone index using text query with optional metadata filtering
+   * Search a Pinecone index using text query with optional metadata filtering.
+   * When options.fields is set, only those fields are requested (e.g. for count: no chunk_text).
    */
   private async searchIndex(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    index: any,
+    index: SearchableIndex,
     query: string,
     topK: number,
     namespace?: string,
-    metadataFilter?: Record<string, any>
+    metadataFilter?: Record<string, unknown>,
+    options?: { fields?: string[] }
   ): Promise<PineconeHit[]> {
-    try {
-      // Get namespace object
-      const ns = namespace ? index.namespace(namespace) : index;
+    // Build query payload in the same shape as Python implementation.
+    const queryPayload: Record<string, unknown> = {
+      top_k: topK,
+      inputs: { text: query },
+    };
 
-      // Use searchRecords API (Pinecone v5+)
-      const queryParams: any = {
+    // Include filter when explicitly provided (matches Python behavior).
+    if (metadataFilter !== undefined) {
+      queryPayload.filter = metadataFilter;
+      if (!options?.fields) {
+        console.error('Applying metadata filter:', JSON.stringify(metadataFilter));
+      }
+    }
+
+    try {
+      // Preferred path: Pinecone search API.
+      if (typeof index.search === 'function') {
+        const searchOpts: { namespace?: string; query: Record<string, unknown>; fields?: string[] } = {
+          namespace,
+          query: queryPayload,
+        };
+        if (options?.fields?.length) {
+          searchOpts.fields = options.fields;
+        }
+        const result = await index.search(searchOpts);
+        return result?.result?.hits || [];
+      }
+
+      // Backward-compatible fallback for older API shapes.
+      const target = namespace && index.namespace ? index.namespace(namespace) : index;
+      const queryParams: { query: Record<string, unknown>; fields?: string[] } = {
         query: {
           topK,
           inputs: { text: query },
         },
       };
-
-      // Add metadata filter if provided
-      if (metadataFilter && Object.keys(metadataFilter).length > 0) {
+      if (metadataFilter !== undefined) {
         queryParams.query.filter = metadataFilter;
-        console.error('Applying metadata filter:', JSON.stringify(metadataFilter));
       }
-
-      const result = await ns.searchRecords(queryParams);
-
+      if (options?.fields?.length) {
+        queryParams.fields = options.fields;
+      }
+      const result = target.searchRecords
+        ? await target.searchRecords(queryParams)
+        : { result: { hits: [] as PineconeHit[] } };
       return result?.result?.hits || [];
     } catch (error) {
-      console.error('Error searching index:', error);
-      return [];
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Pinecone search failed for namespace "${namespace ?? 'default'}": ${errorMessage}`);
     }
   }
 
@@ -193,9 +262,8 @@ export class PineconeClient {
    *
    * Uses the higher score when duplicates are found.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private mergeResults(denseHits: PineconeHit[], sparseHits: PineconeHit[]): any[] {
-    const deduped: Record<string, any> = {};
+  private mergeResults(denseHits: PineconeHit[], sparseHits: PineconeHit[]): MergedHit[] {
+    const deduped: Record<string, MergedHit> = {};
 
     for (const hit of [...denseHits, ...sparseHits]) {
       const hitId = hit._id || '';
@@ -205,14 +273,14 @@ export class PineconeClient {
         continue;
       }
 
-      const hitMetadata: Record<string, any> = {};
+      const hitMetadata: Record<string, PineconeMetadataValue> = {};
       let content = '';
 
       for (const [key, value] of Object.entries(hit.fields || {})) {
         if (key === 'chunk_text') {
-          content = value;
+          content = typeof value === 'string' ? value : '';
         } else {
-          hitMetadata[key] = value;
+          hitMetadata[key] = value as PineconeMetadataValue;
         }
       }
 
@@ -232,8 +300,7 @@ export class PineconeClient {
    */
   private async rerankResults(
     query: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    results: any[],
+    results: MergedHit[],
     topN: number
   ): Promise<SearchResult[]> {
     if (!results || results.length === 0) {
@@ -243,16 +310,21 @@ export class PineconeClient {
     const pc = this.ensureClient();
 
     try {
-      const rerankResult = await pc.inference.rerank(this.rerankModel, query, results, {
+      const rerankResult = await pc.inference.rerank(
+        this.rerankModel,
+        query,
+        results as unknown as (string | Record<string, string>)[],
+        {
         topN,
         rankFields: ['chunk_text'],
         returnDocuments: true,
         parameters: { truncate: 'END' },
-      });
+        }
+      );
 
       const reranked: SearchResult[] = [];
       for (const item of rerankResult.data || []) {
-        const document = item.document || {};
+        const document = (item.document || {}) as MergedHit;
         reranked.push({
           id: document._id || '',
           content: document.chunk_text || '',
@@ -282,7 +354,14 @@ export class PineconeClient {
    * and optionally reranks using the configured reranking model.
    */
   async query(params: QueryParams): Promise<SearchResult[]> {
-    const { query, topK: requestedTopK, namespace, metadataFilter, useReranking = true } = params;
+    const {
+      query,
+      topK: requestedTopK,
+      namespace,
+      metadataFilter,
+      useReranking = true,
+      fields: requestedFields,
+    } = params;
 
     // Validate inputs
     if (!query || !query.trim()) {
@@ -293,18 +372,44 @@ export class PineconeClient {
     if (topK < 1) {
       throw new Error('topK must be at least 1');
     }
-    if (topK > MAX_TOP_K) {
-      topK = MAX_TOP_K; // Cap at 100 for performance
+    // Allow up to COUNT_TOP_K when explicitly requested (e.g. for count tool); otherwise cap at MAX_TOP_K
+    const maxAllowed =
+      requestedTopK !== undefined && requestedTopK > MAX_TOP_K ? COUNT_TOP_K : MAX_TOP_K;
+    if (topK > maxAllowed) {
+      topK = maxAllowed;
     }
+
+    // When reranking, Pinecone requires chunk_text in returned fields; add it if user specified fields without it
+    const searchFields =
+      requestedFields?.length &&
+      useReranking &&
+      !requestedFields.includes('chunk_text')
+        ? [...requestedFields, 'chunk_text']
+        : requestedFields;
 
     // Ensure indexes are ready
     const { denseIndex, sparseIndex } = await this.ensureIndexes();
 
+    const searchOptions = searchFields?.length ? { fields: searchFields } : undefined;
+
     // Perform hybrid search
-    const [denseHits, sparseHits] = await Promise.all([
-      this.searchIndex(denseIndex, query, topK, namespace, metadataFilter),
-      this.searchIndex(sparseIndex, query, topK, namespace, metadataFilter),
+    const [denseResult, sparseResult] = await Promise.allSettled([
+      this.searchIndex(denseIndex, query, topK, namespace, metadataFilter, searchOptions),
+      this.searchIndex(sparseIndex, query, topK, namespace, metadataFilter, searchOptions),
     ]);
+
+    const denseHits = denseResult.status === 'fulfilled' ? denseResult.value : [];
+    const sparseHits = sparseResult.status === 'fulfilled' ? sparseResult.value : [];
+
+    if (denseResult.status === 'rejected') {
+      console.error('Dense index search failed:', denseResult.reason);
+    }
+    if (sparseResult.status === 'rejected') {
+      console.error('Sparse index search failed:', sparseResult.reason);
+    }
+    if (denseResult.status === 'rejected' && sparseResult.status === 'rejected') {
+      throw new Error('Hybrid search failed: both dense and sparse index searches failed.');
+    }
 
     // Merge results
     const mergedResults = this.mergeResults(denseHits, sparseHits);
@@ -328,5 +433,44 @@ export class PineconeClient {
     );
 
     return documents;
+  }
+
+  /**
+   * Return the number of unique documents matching the query and optional metadata filter.
+   * Uses semantic search only (dense index), requests minimal fields (document_number, url, doc_id)
+   * to avoid transferring chunk content, and deduplicates by document for a document-level count.
+   */
+  async count(params: CountParams): Promise<CountResult> {
+    const { denseIndex } = await this.ensureIndexes();
+
+    const hits = await this.searchIndex(
+      denseIndex,
+      params.query,
+      COUNT_TOP_K,
+      params.namespace,
+      params.metadataFilter,
+      { fields: [...COUNT_FIELDS] }
+    );
+
+    const docKeys = new Set<string>();
+    for (const hit of hits) {
+      const fields = hit.fields || {};
+      const docNumber = fields.document_number;
+      const url = fields.url;
+      const docId = fields.doc_id;
+      const key =
+        (typeof docNumber === 'string' ? docNumber : undefined) ??
+        (typeof url === 'string' ? url : undefined) ??
+        (typeof docId === 'string' ? docId : undefined) ??
+        hit._id ??
+        '';
+      docKeys.add(key);
+    }
+
+    const count = docKeys.size;
+    return {
+      count,
+      truncated: hits.length >= COUNT_TOP_K,
+    };
   }
 }
