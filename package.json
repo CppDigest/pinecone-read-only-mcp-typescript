@@ -1,6 +1,6 @@
 {
   "name": "@will-cppa/pinecone-read-only-mcp",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "A Model Context Protocol (MCP) server that provides semantic search over Pinecone vector databases using hybrid search (dense + sparse) with reranking.",
   "type": "module",
   "main": "dist/index.js",
@@ -26,16 +26,17 @@
   "license": "BSL-1.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript.git"
+    "url": "git+https://github.com/CppDigest/pinecone-read-only-mcp-typescript.git"
   },
   "bugs": {
-    "url": "https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/issues"
+    "url": "https://github.com/CppDigest/pinecone-read-only-mcp-typescript/issues"
   },
-  "homepage": "https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript#readme",
+  "homepage": "https://github.com/CppDigest/pinecone-read-only-mcp-typescript#readme",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
+
     "clean": "node -e \"const fs=require('fs'); fs.rmSync('dist',{recursive:true,force:true});\"",
     "build": "npm run clean && node ./node_modules/typescript/bin/tsc",
     "build:watch": "tsc --watch",
