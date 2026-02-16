@@ -3,8 +3,10 @@ import { z } from 'zod';
 import { FAST_QUERY_FIELDS, MAX_TOP_K, MIN_TOP_K } from '../../constants.js';
 import type { QueryResponse } from '../../types.js';
 import { getPineconeClient } from '../client-context.js';
+import { formatQueryResultRows } from '../format-query-result.js';
 import { metadataFilterSchema, validateMetadataFilter } from '../metadata-filter.js';
 import { requireSuggested } from '../suggestion-flow.js';
+import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
 type QueryMode = 'query' | 'query_fast' | 'query_detailed';
@@ -55,10 +57,6 @@ async function executeQuery(params: QueryExecParams) {
       return jsonErrorResponse({ status: 'error', message: flowCheck.message });
     }
 
-    if (metadata_filter) {
-      console.error('Received metadata filter:', JSON.stringify(metadata_filter, null, 2));
-    }
-
     const client = getPineconeClient();
     const results = await client.query({
       query: query_text.trim(),
@@ -69,24 +67,7 @@ async function executeQuery(params: QueryExecParams) {
       fields: fields?.length ? fields : undefined,
     });
 
-    const formattedResults = results.map((doc) => {
-      const docNum = doc.metadata.document_number;
-      const filename = doc.metadata.filename;
-      const paper_number =
-        (typeof docNum === 'string' ? docNum : null) ??
-        (typeof filename === 'string' ? filename.replace('.md', '').toUpperCase() : null) ??
-        null;
-      return {
-        paper_number,
-        title: String(doc.metadata.title ?? ''),
-        author: String(doc.metadata.author ?? ''),
-        url: String(doc.metadata.url ?? ''),
-        content: doc.content.substring(0, 2000),
-        score: Math.round(doc.score * 10000) / 10000,
-        reranked: doc.reranked,
-        metadata: doc.metadata,
-      };
-    });
+    const formattedResults = formatQueryResultRows(results);
 
     const response: QueryResponse = {
       status: 'success',
@@ -100,14 +81,10 @@ async function executeQuery(params: QueryExecParams) {
     };
     return jsonResponse(response);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('Error executing query:', error);
+    logToolError('query', error);
     const response: QueryResponse = {
       status: 'error',
-      message:
-        process.env.LOG_LEVEL === 'DEBUG'
-          ? errorMessage
-          : 'An error occurred while processing your query',
+      message: getToolErrorMessage(error, 'An error occurred while processing your query'),
     };
     return jsonErrorResponse(response);
   }

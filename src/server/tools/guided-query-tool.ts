@@ -1,64 +1,18 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { FAST_QUERY_FIELDS, MAX_TOP_K, MIN_TOP_K } from '../../constants.js';
-import type { PineconeMetadataValue, QueryResponse, SearchResult } from '../../types.js';
+import type { QueryResponse } from '../../types.js';
 import { getPineconeClient } from '../client-context.js';
+import { formatQueryResultRows } from '../format-query-result.js';
 import { metadataFilterSchema, validateMetadataFilter } from '../metadata-filter.js';
 import { rankNamespacesByQuery } from '../namespace-router.js';
 import { getNamespacesWithCache } from '../namespaces-cache.js';
 import { suggestQueryParams } from '../query-suggestion.js';
 import { markSuggested } from '../suggestion-flow.js';
+import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
-import { generateUrlForNamespace } from '../url-generation.js';
 
 type GuidedToolName = 'count' | 'query_fast' | 'query_detailed';
-
-function formatQueryResponse(
-  queryText: string,
-  namespace: string,
-  metadataFilter: Record<string, unknown> | undefined,
-  fields: string[] | undefined,
-  mode: 'query_fast' | 'query_detailed',
-  results: SearchResult[],
-  enrichUrls: boolean
-): QueryResponse {
-  const formattedResults = results.map((doc) => {
-    const metadata = { ...doc.metadata } as Record<string, PineconeMetadataValue>;
-    if (enrichUrls) {
-      const generated = generateUrlForNamespace(namespace, metadata);
-      if (generated.url && typeof metadata.url !== 'string') {
-        metadata.url = generated.url;
-      }
-    }
-    const docNum = metadata.document_number;
-    const filename = metadata.filename;
-    const paper_number =
-      (typeof docNum === 'string' ? docNum : null) ??
-      (typeof filename === 'string' ? filename.replace('.md', '').toUpperCase() : null) ??
-      null;
-    return {
-      paper_number,
-      title: String(metadata.title ?? ''),
-      author: String(metadata.author ?? ''),
-      url: String(metadata.url ?? ''),
-      content: doc.content.substring(0, 2000),
-      score: Math.round(doc.score * 10000) / 10000,
-      reranked: doc.reranked,
-      metadata,
-    };
-  });
-
-  return {
-    status: 'success',
-    mode,
-    query: queryText,
-    namespace,
-    metadata_filter: metadataFilter,
-    result_count: formattedResults.length,
-    ...(fields?.length ? { fields } : {}),
-    results: formattedResults,
-  };
-}
 
 export function registerGuidedQueryTool(server: McpServer): void {
   server.registerTool(
@@ -194,26 +148,30 @@ export function registerGuidedQueryTool(server: McpServer): void {
           useReranking: !isFast,
           fields,
         });
-        const result = formatQueryResponse(
-          queryText,
+        const formattedResults = formatQueryResultRows(queryResults, {
           namespace,
-          metadata_filter,
-          fields,
-          isFast ? 'query_fast' : 'query_detailed',
-          queryResults,
-          enrich_urls
-        );
+          enrichUrls: enrich_urls,
+        });
+        const result: QueryResponse = {
+          status: 'success',
+          mode: isFast ? 'query_fast' : 'query_detailed',
+          query: queryText,
+          namespace,
+          metadata_filter: metadata_filter,
+          result_count: formattedResults.length,
+          ...(fields.length > 0 ? { fields } : {}),
+          results: formattedResults,
+        };
         return jsonResponse({
           status: 'success',
           decision_trace,
           result,
         });
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.error('Error in guided_query tool:', error);
+        logToolError('guided_query', error);
         return jsonErrorResponse({
           status: 'error',
-          message: process.env.LOG_LEVEL === 'DEBUG' ? msg : 'Failed to execute guided query',
+          message: getToolErrorMessage(error, 'Failed to execute guided query'),
         });
       }
     }

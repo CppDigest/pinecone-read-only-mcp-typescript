@@ -7,6 +7,7 @@
  */
 
 import { Pinecone } from '@pinecone-database/pinecone';
+import { debug as logDebug, error as logError, info as logInfo } from './logger.js';
 import type {
   PineconeClientConfig,
   SearchResult,
@@ -77,7 +78,7 @@ export class PineconeClient {
         );
       }
       this.pc = new Pinecone({ apiKey: this.apiKey });
-      console.error('Pinecone client initialized');
+      logInfo('Pinecone client initialized');
     }
     return this.pc;
   }
@@ -100,7 +101,7 @@ export class PineconeClient {
     this.sparseIndex = sparse;
     this.initialized = true;
 
-    console.error(`Connected to indexes: ${denseName} and ${sparseName}`);
+    logInfo(`Connected to indexes: ${denseName} and ${sparseName}`);
     return { denseIndex: dense, sparseIndex: sparse };
   }
 
@@ -215,7 +216,7 @@ export class PineconeClient {
     if (metadataFilter !== undefined) {
       queryPayload.filter = metadataFilter;
       if (!options?.fields) {
-        console.error('Applying metadata filter:', JSON.stringify(metadataFilter));
+        logDebug('Applying metadata filter', metadataFilter);
       }
     }
 
@@ -335,7 +336,7 @@ export class PineconeClient {
       }
       return reranked;
     } catch (error) {
-      console.error('Error reranking results:', error);
+      logError('Error reranking results', error);
       // Fall back to returning unreranked results
       return results.slice(0, topN).map((result) => ({
         id: result._id || '',

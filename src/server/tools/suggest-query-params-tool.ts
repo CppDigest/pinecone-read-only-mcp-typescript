@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getNamespacesWithCache } from '../namespaces-cache.js';
 import { suggestQueryParams } from '../query-suggestion.js';
 import { markSuggested } from '../suggestion-flow.js';
+import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
 export function registerSuggestQueryParamsTool(server: McpServer): void {
@@ -51,11 +52,10 @@ export function registerSuggestQueryParamsTool(server: McpServer): void {
         };
         return jsonResponse(response);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.error('Error in suggest_query_params tool:', error);
+        logToolError('suggest_query_params', error);
         return jsonErrorResponse({
           status: 'error',
-          message: process.env.LOG_LEVEL === 'DEBUG' ? msg : 'Failed to suggest query params',
+          message: getToolErrorMessage(error, 'Failed to suggest query params'),
         });
       }
     }

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getPineconeClient } from '../client-context.js';
 import { metadataFilterSchema, validateMetadataFilter } from '../metadata-filter.js';
 import { requireSuggested } from '../suggestion-flow.js';
+import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
 const COUNT_RESPONSE_STATUS = 'success' as const;
@@ -67,11 +68,10 @@ export function registerCountTool(server: McpServer): void {
         };
         return jsonResponse(response);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.error('Error in count tool:', error);
+        logToolError('count', error);
         const response: CountResponse = {
           status: 'error',
-          message: process.env.LOG_LEVEL === 'DEBUG' ? msg : 'Failed to get count',
+          message: getToolErrorMessage(error, 'Failed to get count'),
         };
         return jsonErrorResponse(response);
       }

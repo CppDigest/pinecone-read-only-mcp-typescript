@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getNamespacesWithCache } from '../namespaces-cache.js';
 import { rankNamespacesByQuery } from '../namespace-router.js';
+import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
 export function registerNamespaceRouterTool(server: McpServer): void {
@@ -34,11 +35,10 @@ export function registerNamespaceRouterTool(server: McpServer): void {
         };
         return jsonResponse(response);
       } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.error('Error in namespace_router tool:', error);
+        logToolError('namespace_router', error);
         return jsonErrorResponse({
           status: 'error',
-          message: process.env.LOG_LEVEL === 'DEBUG' ? msg : 'Failed to route namespace',
+          message: getToolErrorMessage(error, 'Failed to route namespace'),
         });
       }
     }

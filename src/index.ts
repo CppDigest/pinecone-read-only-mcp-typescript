@@ -12,6 +12,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { PineconeClient } from './pinecone-client.js';
 import { setupServer, setPineconeClient } from './server.js';
 import { DEFAULT_INDEX_NAME, DEFAULT_RERANK_MODEL } from './constants.js';
+import type { LogLevel } from './config.js';
+import { setLogLevel } from './logger.js';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -96,13 +98,17 @@ async function main(): Promise<void> {
   try {
     const options = parseArgs();
 
-    // Set log level
-    const logLevel =
+    // Set log level (env + logger singleton so tools get correct level)
+    const rawLevel =
       options.logLevel ||
       process.env.PINECONE_READ_ONLY_MCP_LOG_LEVEL ||
       process.env.LOG_LEVEL ||
       'INFO';
+    const logLevel = (['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(rawLevel)
+      ? rawLevel
+      : 'INFO') as LogLevel;
     process.env.LOG_LEVEL = logLevel;
+    setLogLevel(logLevel);
 
     // Get API key
     const apiKey = options.apiKey || process.env.PINECONE_API_KEY;
