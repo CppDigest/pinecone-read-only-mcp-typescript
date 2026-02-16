@@ -12,13 +12,13 @@ export function generateUrlForNamespace(
   namespace: string,
   metadata: Record<string, unknown>
 ): UrlGenerationResult {
-  const existingUrl = asString(metadata.url);
+  const existingUrl = asString(metadata['url']);
   if (existingUrl) {
     return { url: existingUrl, method: 'metadata.url' };
   }
 
   if (namespace === 'mailing') {
-    const docIdOrThread = asString(metadata.doc_id) ?? asString(metadata.thread_id);
+    const docIdOrThread = asString(metadata['doc_id']) ?? asString(metadata['thread_id']);
     if (!docIdOrThread) {
       return {
         url: null,
@@ -33,14 +33,14 @@ export function generateUrlForNamespace(
   }
 
   if (namespace === 'slack-Cpplang') {
-    const source = asString(metadata.source);
+    const source = asString(metadata['source']);
     if (source) {
       return { url: source, method: 'metadata.source' };
     }
 
-    const teamId = asString(metadata.team_id);
-    const channelId = asString(metadata.channel_id);
-    const docId = asString(metadata.doc_id);
+    const teamId = asString(metadata['team_id']);
+    const channelId = asString(metadata['channel_id']);
+    const docId = asString(metadata['doc_id']);
     if (!teamId || !channelId || !docId) {
       return {
         url: null,

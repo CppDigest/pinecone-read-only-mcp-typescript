@@ -5,7 +5,7 @@ import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
 function extractMetadata(record: Record<string, unknown>): Record<string, unknown> {
-  const nested = record.metadata;
+  const nested = record['metadata'];
   if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
     return nested as Record<string, unknown>;
   }

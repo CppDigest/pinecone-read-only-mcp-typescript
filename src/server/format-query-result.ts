@@ -36,13 +36,13 @@ export function formatSearchResultAsRow(
 
   if (options?.enrichUrls && options?.namespace) {
     const generated = generateUrlForNamespace(options.namespace, metadata);
-    if (generated.url && typeof metadata.url !== 'string') {
-      metadata.url = generated.url;
+    if (generated.url && typeof metadata['url'] !== 'string') {
+      metadata['url'] = generated.url;
     }
   }
 
-  const docNum = metadata.document_number;
-  const filename = metadata.filename;
+  const docNum = metadata['document_number'];
+  const filename = metadata['filename'];
   const paper_number =
     (typeof docNum === 'string' ? docNum : null) ??
     (typeof filename === 'string' ? filename.replace('.md', '').toUpperCase() : null) ??
@@ -50,9 +50,9 @@ export function formatSearchResultAsRow(
 
   return {
     paper_number,
-    title: String(metadata.title ?? ''),
-    author: String(metadata.author ?? ''),
-    url: String(metadata.url ?? ''),
+    title: String(metadata['title'] ?? ''),
+    author: String(metadata['author'] ?? ''),
+    url: String(metadata['url'] ?? ''),
     content: doc.content.substring(0, contentMaxLength),
     score: Math.round(doc.score * 10000) / 10000,
     reranked: doc.reranked,

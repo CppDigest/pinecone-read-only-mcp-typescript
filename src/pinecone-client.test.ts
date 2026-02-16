@@ -32,8 +32,8 @@ describe('PineconeClient', () => {
     });
 
     it('should use environment variables as fallbacks', () => {
-      process.env.PINECONE_INDEX_NAME = 'env-index';
-      process.env.PINECONE_RERANK_MODEL = 'env-model';
+      process.env['PINECONE_INDEX_NAME'] = 'env-index';
+      process.env['PINECONE_RERANK_MODEL'] = 'env-model';
 
       const envClient = new PineconeClient({
         apiKey: 'test-api-key',

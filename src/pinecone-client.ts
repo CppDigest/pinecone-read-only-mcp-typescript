@@ -60,11 +60,13 @@ export class PineconeClient {
 
   constructor(config: PineconeClientConfig) {
     this.apiKey = config.apiKey;
-    this.indexName = config.indexName || process.env.PINECONE_INDEX_NAME || DEFAULT_INDEX_NAME;
+    this.indexName =
+      config.indexName || process.env['PINECONE_INDEX_NAME'] || DEFAULT_INDEX_NAME;
     this.rerankModel =
-      config.rerankModel || process.env.PINECONE_RERANK_MODEL || DEFAULT_RERANK_MODEL;
+      config.rerankModel || process.env['PINECONE_RERANK_MODEL'] || DEFAULT_RERANK_MODEL;
     this.defaultTopK =
-      config.defaultTopK || parseInt(process.env.PINECONE_TOP_K || String(DEFAULT_TOP_K));
+      config.defaultTopK ||
+      parseInt(process.env['PINECONE_TOP_K'] || String(DEFAULT_TOP_K));
   }
 
   /**
@@ -214,7 +216,7 @@ export class PineconeClient {
 
     // Include filter when explicitly provided (matches Python behavior).
     if (metadataFilter !== undefined) {
-      queryPayload.filter = metadataFilter;
+      queryPayload['filter'] = metadataFilter;
       if (!options?.fields) {
         logDebug('Applying metadata filter', metadataFilter);
       }
@@ -243,7 +245,7 @@ export class PineconeClient {
         },
       };
       if (metadataFilter !== undefined) {
-        queryParams.query.filter = metadataFilter;
+        queryParams.query['filter'] = metadataFilter;
       }
       if (options?.fields?.length) {
         queryParams.fields = options.fields;
@@ -270,7 +272,8 @@ export class PineconeClient {
       const hitId = hit._id || '';
       const hitScore = hit._score || 0;
 
-      if (hitId in deduped && (deduped[hitId]._score || 0) >= hitScore) {
+      const existing = deduped[hitId];
+      if (existing !== undefined && (existing._score || 0) >= hitScore) {
         continue;
       }
 
@@ -456,9 +459,9 @@ export class PineconeClient {
     const docKeys = new Set<string>();
     for (const hit of hits) {
       const fields = hit.fields || {};
-      const docNumber = fields.document_number;
-      const url = fields.url;
-      const docId = fields.doc_id;
+      const docNumber = fields['document_number'];
+      const url = fields['url'];
+      const docId = fields['doc_id'];
       const key =
         (typeof docNumber === 'string' ? docNumber : undefined) ??
         (typeof url === 'string' ? url : undefined) ??
