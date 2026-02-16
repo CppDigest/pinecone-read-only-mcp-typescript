@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/@will-cppa/pinecone-read-only-mcp.svg)](https://www.npmjs.com/package/@will-cppa/pinecone-read-only-mcp)
 [![Node.js Version](https://img.shields.io/node/v/@will-cppa/pinecone-read-only-mcp.svg)](https://nodejs.org)
 [![License: BSL-1.0](https://img.shields.io/badge/License-BSL--1.0-blue.svg)](https://opensource.org/licenses/BSL-1.0)
-[![CI](https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/workflows/CI/badge.svg)](https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/actions)
+[![CI](https://github.com/CppDigest/pinecone-read-only-mcp-typescript/workflows/CI/badge.svg)](https://github.com/CppDigest/pinecone-read-only-mcp-typescript/actions)
 
 A Model Context Protocol (MCP) server that provides semantic search over Pinecone vector databases using hybrid search (dense + sparse) with reranking.
 
@@ -46,7 +46,7 @@ npm install -g @will-cppa/pinecone-read-only-mcp
 ### From Source
 
 ```bash
-git clone https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript.git
+git clone https://github.com/CppDigest/pinecone-read-only-mcp-typescript.git
 cd pinecone-read-only-mcp-typescript
 npm install
 npm run build
@@ -453,7 +453,7 @@ Metadata filters allow you to narrow down search results based on document prope
 ### Setup Development Environment
 
 ```bash
-git clone https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript.git
+git clone https://github.com/CppDigest/pinecone-read-only-mcp-typescript.git
 cd pinecone-read-only-mcp-typescript
 npm install
 ```
@@ -526,7 +526,7 @@ npm run dev -- --api-key YOUR_API_KEY
 
 ## Comparison with Python Version
 
-This TypeScript implementation provides the same functionality as the [Python version](https://github.com/iTinkerBell/pinecone-read-only-mcp) with the following benefits:
+This TypeScript implementation provides the same functionality as the [Python version](https://github.com/CppDigest/pinecone-read-only-mcp) with the following benefits:
 
 - Native Node.js integration
 - Better npm ecosystem integration
@@ -577,14 +577,14 @@ This project uses:
 
 ## Related Projects
 
-- [Python version](https://github.com/iTinkerBell/pinecone-read-only-mcp) - Original Python implementation
+- [Python version](https://github.com/CppDigest/pinecone-read-only-mcp) - Original Python implementation
 - [Pinecone MCP](https://github.com/pinecone-io/pinecone-mcp) - Full-featured Pinecone MCP with write capabilities
 
 ## Support
 
 For issues and questions:
 
-- GitHub Issues: [https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/issues](https://github.com/iTinkerBell/pinecone-read-only-mcp-typescript/issues)
+- GitHub Issues: [https://github.com/CppDigest/pinecone-read-only-mcp-typescript/issues](https://github.com/CppDigest/pinecone-read-only-mcp-typescript/issues)
 - Email: will@cppalliance.org
 
 ## Changelog

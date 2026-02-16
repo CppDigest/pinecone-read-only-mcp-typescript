@@ -330,10 +330,10 @@ export class PineconeClient {
       for (const item of rerankResult.data || []) {
         const document = (item.document || {}) as MergedHit;
         reranked.push({
-          id: document._id || '',
-          content: document.chunk_text || '',
+          id: document['_id'] || '',
+          content: document['chunk_text'] || '',
           score: parseFloat(String(item.score || 0)),
-          metadata: document.metadata || {},
+          metadata: document['metadata'] || {},
           reranked: true,
         });
       }
