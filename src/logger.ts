@@ -56,6 +56,8 @@ export function warn(msg: string, data?: unknown): void {
 export function error(msg: string, err?: unknown): void {
   if (shouldLog('ERROR')) {
     const detail = err instanceof Error ? err.message : err !== undefined ? String(err) : undefined;
-    console.error(formatMessage('ERROR', msg, detail !== undefined ? { error: detail } : undefined));
+    console.error(
+      formatMessage('ERROR', msg, detail !== undefined ? { error: detail } : undefined)
+    );
   }
 }

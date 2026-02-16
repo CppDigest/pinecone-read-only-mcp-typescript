@@ -8,7 +8,13 @@ import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
 const COUNT_RESPONSE_STATUS = 'success' as const;
 type CountResponse =
-  | { status: typeof COUNT_RESPONSE_STATUS; count: number; truncated: boolean; namespace: string; metadata_filter?: Record<string, unknown> }
+  | {
+      status: typeof COUNT_RESPONSE_STATUS;
+      count: number;
+      truncated: boolean;
+      namespace: string;
+      metadata_filter?: Record<string, unknown>;
+    }
   | { status: 'error'; message: string };
 
 export function registerCountTool(server: McpServer): void {
@@ -25,10 +31,14 @@ export function registerCountTool(server: McpServer): void {
         'For count-by-metadata only, use a broad query_text (e.g. "paper" or "document"). ' +
         'Same metadata_filter operators as query: $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin.',
       inputSchema: {
-        namespace: z.string().describe('Namespace to count in. Use list_namespaces to discover namespaces.'),
+        namespace: z
+          .string()
+          .describe('Namespace to count in. Use list_namespaces to discover namespaces.'),
         query_text: z
           .string()
-          .describe('Search query text. Use a broad term (e.g. "paper", "document") when counting by metadata only.'),
+          .describe(
+            'Search query text. Use a broad term (e.g. "paper", "document") when counting by metadata only.'
+          ),
         metadata_filter: metadataFilterSchema
           .optional()
           .describe(
@@ -40,7 +50,10 @@ export function registerCountTool(server: McpServer): void {
       try {
         const { namespace, query_text, metadata_filter } = params;
         if (!query_text || !query_text.trim()) {
-          const response: CountResponse = { status: 'error', message: 'query_text cannot be empty' };
+          const response: CountResponse = {
+            status: 'error',
+            message: 'query_text cannot be empty',
+          };
           return jsonErrorResponse(response);
         }
         if (metadata_filter) {

@@ -20,8 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ESLint and Prettier configuration
 - Complete documentation
 
-
-
 ### Changed
 
 - N/A
@@ -45,6 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.1] - 2026-01-27
 
 ### Changed
+
 - Enhanced TypeScript strict mode with additional compiler checks:
   - Added `noUncheckedIndexedAccess` for safer array/object access
   - Added `noImplicitOverride` to require explicit override keywords
@@ -53,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified build script to use standard `tsc` command
 
 ### Fixed
+
 - Fixed build script that was suppressing TypeScript compilation errors with `|| exit 0`
 - Fixed all type safety issues to comply with stricter TypeScript checks
 

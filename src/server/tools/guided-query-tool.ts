@@ -27,7 +27,9 @@ export function registerGuidedQueryTool(server: McpServer): void {
         namespace: z
           .string()
           .optional()
-          .describe('Optional explicit namespace. If omitted, namespace_router logic will choose one.'),
+          .describe(
+            'Optional explicit namespace. If omitted, namespace_router logic will choose one.'
+          ),
         metadata_filter: metadataFilterSchema
           .optional()
           .describe('Optional metadata filter to constrain results.'),

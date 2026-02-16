@@ -25,7 +25,9 @@ describe('generateUrlForNamespace', () => {
     const r = generateUrlForNamespace('mailing', {
       thread_id: 'boost@lists.boost.org/thread/ABC123',
     });
-    expect(r.url).toBe('https://lists.boost.org/archives/list/boost@lists.boost.org/thread/ABC123/');
+    expect(r.url).toBe(
+      'https://lists.boost.org/archives/list/boost@lists.boost.org/thread/ABC123/'
+    );
     expect(r.method).toBe('generated.mailing');
   });
 

@@ -23,7 +23,9 @@ export function registerGenerateUrlsTool(server: McpServer): void {
       inputSchema: {
         namespace: z
           .string()
-          .describe('Target namespace. URL generation currently supports mailing and slack-Cpplang.'),
+          .describe(
+            'Target namespace. URL generation currently supports mailing and slack-Cpplang.'
+          ),
         records: z
           .array(z.record(z.string(), z.unknown()))
           .describe(

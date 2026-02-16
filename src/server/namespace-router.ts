@@ -21,7 +21,7 @@ function scoreNamespace(
     'wg21-papers': ['wg21', 'paper', 'proposal', 'document_number', 'p0', 'standard'],
     'github-compiler': ['github', 'issue', 'pr', 'repository', 'compiler', 'bug'],
     'youtube-scripts': ['youtube', 'video', 'script', 'transcript', 'channel'],
-    'mailing': ['mailing', 'email', 'thread', 'subject', 'list'],
+    mailing: ['mailing', 'email', 'thread', 'subject', 'list'],
     'slack-cpplang': ['slack', 'chat', 'message', 'channel', 'thread'],
     'blog-posts': ['blog', 'post', 'article'],
     'cpp-documentation': ['documentation', 'docs', 'reference', 'library'],

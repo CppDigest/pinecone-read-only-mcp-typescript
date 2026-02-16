@@ -14,7 +14,16 @@ const metadataFilterValueSchema: z.ZodType<unknown> = z.lazy(() =>
 );
 
 export const metadataFilterSchema = z.record(z.string(), metadataFilterValueSchema);
-const ALLOWED_FILTER_OPERATORS = new Set(['$eq', '$ne', '$gt', '$gte', '$lt', '$lte', '$in', '$nin']);
+const ALLOWED_FILTER_OPERATORS = new Set([
+  '$eq',
+  '$ne',
+  '$gt',
+  '$gte',
+  '$lt',
+  '$lte',
+  '$in',
+  '$nin',
+]);
 
 function isPrimitiveFilterValue(value: unknown): boolean {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';

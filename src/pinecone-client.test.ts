@@ -66,7 +66,10 @@ describe('PineconeClient', () => {
     it('should continue hybrid search when one index fails', async () => {
       const testClient = client as PineconeClientTestDouble;
 
-      testClient.ensureIndexes = async () => ({ denseIndex: {} as SearchableIndex, sparseIndex: {} as SearchableIndex });
+      testClient.ensureIndexes = async () => ({
+        denseIndex: {} as SearchableIndex,
+        sparseIndex: {} as SearchableIndex,
+      });
 
       let searchCall = 0;
       testClient.searchIndex = async () => {
@@ -98,7 +101,10 @@ describe('PineconeClient', () => {
     it('should throw when both dense and sparse searches fail', async () => {
       const testClient = client as PineconeClientTestDouble;
 
-      testClient.ensureIndexes = async () => ({ denseIndex: {} as SearchableIndex, sparseIndex: {} as SearchableIndex });
+      testClient.ensureIndexes = async () => ({
+        denseIndex: {} as SearchableIndex,
+        sparseIndex: {} as SearchableIndex,
+      });
       testClient.searchIndex = async () => {
         throw new Error('index failure');
       };
@@ -117,15 +123,30 @@ describe('PineconeClient', () => {
   describe('count', () => {
     it('should return unique document count using semantic search only with minimal fields', async () => {
       const testClient = client as PineconeClientTestDouble;
-      testClient.ensureIndexes = async () => ({ denseIndex: {} as SearchableIndex, sparseIndex: {} as SearchableIndex });
+      testClient.ensureIndexes = async () => ({
+        denseIndex: {} as SearchableIndex,
+        sparseIndex: {} as SearchableIndex,
+      });
 
       // Two chunks from doc A, one from doc B -> unique count 2
       testClient.searchIndex = async (_index, _query, _topK, _ns, _filter, options) => {
         expect(options?.fields).toEqual(['document_number', 'url', 'doc_id']);
         return [
-          { _id: 'c1', _score: 1, fields: { document_number: 'p1234r0', url: 'https://example.com/1' } },
-          { _id: 'c2', _score: 0.9, fields: { document_number: 'p1234r0', url: 'https://example.com/1' } },
-          { _id: 'c3', _score: 0.8, fields: { document_number: 'p5678r0', url: 'https://example.com/2' } },
+          {
+            _id: 'c1',
+            _score: 1,
+            fields: { document_number: 'p1234r0', url: 'https://example.com/1' },
+          },
+          {
+            _id: 'c2',
+            _score: 0.9,
+            fields: { document_number: 'p1234r0', url: 'https://example.com/1' },
+          },
+          {
+            _id: 'c3',
+            _score: 0.8,
+            fields: { document_number: 'p5678r0', url: 'https://example.com/2' },
+          },
         ];
       };
 
@@ -141,7 +162,10 @@ describe('PineconeClient', () => {
 
     it('should set truncated when hit limit is reached', async () => {
       const testClient = client as PineconeClientTestDouble;
-      testClient.ensureIndexes = async () => ({ denseIndex: {} as SearchableIndex, sparseIndex: {} as SearchableIndex });
+      testClient.ensureIndexes = async () => ({
+        denseIndex: {} as SearchableIndex,
+        sparseIndex: {} as SearchableIndex,
+      });
       const manyHits: PineconeHit[] = Array.from({ length: 10000 }, (_, i) => ({
         _id: `id-${i}`,
         _score: 1,

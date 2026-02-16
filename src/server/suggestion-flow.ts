@@ -9,23 +9,22 @@ type FlowState = {
 
 const stateByNamespace = new Map<string, FlowState>();
 
-export function markSuggested(
-  namespace: string,
-  state: Omit<FlowState, 'updatedAt'>
-): void {
+export function markSuggested(namespace: string, state: Omit<FlowState, 'updatedAt'>): void {
   stateByNamespace.set(namespace, {
     ...state,
     updatedAt: Date.now(),
   });
 }
 
-export function requireSuggested(namespace: string): {
-  ok: true;
-  flow: FlowState;
-} | {
-  ok: false;
-  message: string;
-} {
+export function requireSuggested(namespace: string):
+  | {
+      ok: true;
+      flow: FlowState;
+    }
+  | {
+      ok: false;
+      message: string;
+    } {
   const state = stateByNamespace.get(namespace);
   if (!state) {
     return {

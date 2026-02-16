@@ -98,7 +98,10 @@ export interface MergedHit {
 
 /** Minimal index interface used for hybrid search (dense/sparse) and namespace discovery. */
 export interface SearchableIndex {
-  describeIndexStats?(): Promise<{ dimension?: number; namespaces?: Record<string, { recordCount?: number }> }>;
+  describeIndexStats?(): Promise<{
+    dimension?: number;
+    namespaces?: Record<string, { recordCount?: number }>;
+  }>;
   search?(opts: {
     namespace?: string;
     query: Record<string, unknown>;
@@ -109,5 +112,7 @@ export interface SearchableIndex {
       matches?: Array<{ metadata?: Record<string, unknown> }>;
     }>;
   };
-  searchRecords?(params: { query: Record<string, unknown> }): Promise<{ result?: { hits?: PineconeHit[] } }>;
+  searchRecords?(params: {
+    query: Record<string, unknown>;
+  }): Promise<{ result?: { hits?: PineconeHit[] } }>;
 }

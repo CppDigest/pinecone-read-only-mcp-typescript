@@ -23,15 +23,7 @@ type QueryExecParams = {
 
 async function executeQuery(params: QueryExecParams) {
   try {
-    const {
-      query_text,
-      namespace,
-      top_k,
-      use_reranking,
-      metadata_filter,
-      fields,
-      mode,
-    } = params;
+    const { query_text, namespace, top_k, use_reranking, metadata_filter, fields, mode } = params;
 
     if (!query_text || !query_text.trim()) {
       const response: QueryResponse = {
@@ -104,7 +96,9 @@ const baseSchema = {
     .max(MAX_TOP_K)
     .default(10)
     .describe('Number of results to return (1-100). Default: 10'),
-  metadata_filter: metadataFilterSchema.optional().describe('Optional metadata filter to narrow down search results.'),
+  metadata_filter: metadataFilterSchema
+    .optional()
+    .describe('Optional metadata filter to narrow down search results.'),
   fields: z
     .array(z.string())
     .optional()
@@ -125,7 +119,9 @@ export function registerQueryTool(server: McpServer): void {
         use_reranking: z
           .boolean()
           .default(true)
-          .describe('Whether to use semantic reranking for better relevance. Slower but more accurate.'),
+          .describe(
+            'Whether to use semantic reranking for better relevance. Slower but more accurate.'
+          ),
       },
     },
     async (params) =>

@@ -60,13 +60,11 @@ export class PineconeClient {
 
   constructor(config: PineconeClientConfig) {
     this.apiKey = config.apiKey;
-    this.indexName =
-      config.indexName || process.env['PINECONE_INDEX_NAME'] || DEFAULT_INDEX_NAME;
+    this.indexName = config.indexName || process.env['PINECONE_INDEX_NAME'] || DEFAULT_INDEX_NAME;
     this.rerankModel =
       config.rerankModel || process.env['PINECONE_RERANK_MODEL'] || DEFAULT_RERANK_MODEL;
     this.defaultTopK =
-      config.defaultTopK ||
-      parseInt(process.env['PINECONE_TOP_K'] || String(DEFAULT_TOP_K));
+      config.defaultTopK || parseInt(process.env['PINECONE_TOP_K'] || String(DEFAULT_TOP_K));
   }
 
   /**
@@ -88,7 +86,10 @@ export class PineconeClient {
   /**
    * Ensure Pinecone indexes are initialized and return them
    */
-  private async ensureIndexes(): Promise<{ denseIndex: SearchableIndex; sparseIndex: SearchableIndex }> {
+  private async ensureIndexes(): Promise<{
+    denseIndex: SearchableIndex;
+    sparseIndex: SearchableIndex;
+  }> {
     if (this.initialized && this.denseIndex !== null && this.sparseIndex !== null) {
       return { denseIndex: this.denseIndex, sparseIndex: this.sparseIndex };
     }
@@ -124,7 +125,9 @@ export class PineconeClient {
       const { denseIndex } = await this.ensureIndexes();
 
       // Get index stats to find namespaces
-      const stats = denseIndex.describeIndexStats ? await denseIndex.describeIndexStats() : undefined;
+      const stats = denseIndex.describeIndexStats
+        ? await denseIndex.describeIndexStats()
+        : undefined;
       const namespaces = stats?.namespaces ? Object.keys(stats.namespaces) : [];
 
       console.error(`Found ${namespaces.length} namespace(s)`);
@@ -139,12 +142,18 @@ export class PineconeClient {
             // Sample a few records to discover metadata fields
             if (recordCount > 0 && denseIndex.namespace) {
               try {
-                const nsObj = denseIndex.namespace(ns) as { query: (opts: { topK: number; vector: number[]; includeMetadata: boolean }) => Promise<{ matches?: Array<{ metadata?: Record<string, unknown> }> }> } | null;
+                const nsObj = denseIndex.namespace(ns) as {
+                  query: (opts: {
+                    topK: number;
+                    vector: number[];
+                    includeMetadata: boolean;
+                  }) => Promise<{ matches?: Array<{ metadata?: Record<string, unknown> }> }>;
+                } | null;
                 const sampleQuery =
                   nsObj && typeof nsObj.query === 'function'
                     ? await nsObj.query({
                         topK: 5,
-                        vector: Array((stats?.dimension ?? 1536)).fill(0),
+                        vector: Array(stats?.dimension ?? 1536).fill(0),
                         includeMetadata: true,
                       })
                     : { matches: undefined };
@@ -225,7 +234,11 @@ export class PineconeClient {
     try {
       // Preferred path: Pinecone search API.
       if (typeof index.search === 'function') {
-        const searchOpts: { namespace?: string; query: Record<string, unknown>; fields?: string[] } = {
+        const searchOpts: {
+          namespace?: string;
+          query: Record<string, unknown>;
+          fields?: string[];
+        } = {
           namespace,
           query: queryPayload,
         };
@@ -256,7 +269,9 @@ export class PineconeClient {
       return result?.result?.hits || [];
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Pinecone search failed for namespace "${namespace ?? 'default'}": ${errorMessage}`);
+      throw new Error(
+        `Pinecone search failed for namespace "${namespace ?? 'default'}": ${errorMessage}`
+      );
     }
   }
 
@@ -319,10 +334,10 @@ export class PineconeClient {
         query,
         results as unknown as (string | Record<string, string>)[],
         {
-        topN,
-        rankFields: ['chunk_text'],
-        returnDocuments: true,
-        parameters: { truncate: 'END' },
+          topN,
+          rankFields: ['chunk_text'],
+          returnDocuments: true,
+          parameters: { truncate: 'END' },
         }
       );
 
@@ -385,9 +400,7 @@ export class PineconeClient {
 
     // When reranking, Pinecone requires chunk_text in returned fields; add it if user specified fields without it
     const searchFields =
-      requestedFields?.length &&
-      useReranking &&
-      !requestedFields.includes('chunk_text')
+      requestedFields?.length && useReranking && !requestedFields.includes('chunk_text')
         ? [...requestedFields, 'chunk_text']
         : requestedFields;
 

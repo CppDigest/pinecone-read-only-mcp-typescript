@@ -26,7 +26,8 @@ export function suggestQueryParams(
       suggested_fields: [],
       use_count_tool: false,
       recommended_tool: 'query_fast',
-      explanation: 'Namespace not found or has no metadata fields. Call list_namespaces first, then pass a valid namespace.',
+      explanation:
+        'Namespace not found or has no metadata fields. Call list_namespaces first, then pass a valid namespace.',
       namespace_found: false,
     };
   }
@@ -48,13 +49,7 @@ export function suggestQueryParams(
   if (
     /\b(content|summarize|summarise|what does|excerpt|text|say|details?|full text|body)\b/.test(q)
   ) {
-    const fields = keepOnlyAvailable([
-      'document_number',
-      'title',
-      'url',
-      'author',
-      'chunk_text',
-    ]);
+    const fields = keepOnlyAvailable(['document_number', 'title', 'url', 'author', 'chunk_text']);
     return {
       suggested_fields: fields.length ? fields : available,
       use_count_tool: false,

@@ -13,8 +13,16 @@ export function registerNamespaceRouterTool(server: McpServer): void {
         'Suggest likely namespace(s) for a user query using namespace names, metadata fields, and keyword heuristics. ' +
         'Use before suggest_query_params when namespace is unclear.',
       inputSchema: {
-        user_query: z.string().describe('User question/intent used to infer relevant namespace(s).'),
-        top_n: z.number().int().min(1).max(5).default(3).describe('Maximum number of suggested namespaces (1-5).'),
+        user_query: z
+          .string()
+          .describe('User question/intent used to infer relevant namespace(s).'),
+        top_n: z
+          .number()
+          .int()
+          .min(1)
+          .max(5)
+          .default(3)
+          .describe('Maximum number of suggested namespaces (1-5).'),
       },
     },
     async (params) => {

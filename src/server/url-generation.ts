@@ -1,6 +1,11 @@
 export type UrlGenerationResult = {
   url: string | null;
-  method: 'metadata.url' | 'metadata.source' | 'generated.mailing' | 'generated.slack' | 'unavailable';
+  method:
+    | 'metadata.url'
+    | 'metadata.source'
+    | 'generated.mailing'
+    | 'generated.slack'
+    | 'unavailable';
   reason?: string;
 };
 
