@@ -55,8 +55,12 @@ function validateMetadataFilterValue(value: unknown, path: string[]): string | n
         return `Operator "${key}" at "${path.join('.')}" must use an array of primitive values.`;
       }
       if (
-        (key === '$eq' || key === '$ne' || key === '$gt' || key === '$gte' ||
-          key === '$lt' || key === '$lte') &&
+        (key === '$eq' ||
+          key === '$ne' ||
+          key === '$gt' ||
+          key === '$gte' ||
+          key === '$lt' ||
+          key === '$lte') &&
         !isPrimitiveFilterValue(nestedValue)
       ) {
         return `Operator "${key}" at "${path.join('.')}" must use a primitive value.`;

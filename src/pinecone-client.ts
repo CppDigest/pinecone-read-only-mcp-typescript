@@ -7,7 +7,12 @@
  */
 
 import { Pinecone } from '@pinecone-database/pinecone';
-import { debug as logDebug, error as logError, info as logInfo, warn as logWarn } from './logger.js';
+import {
+  debug as logDebug,
+  error as logError,
+  info as logInfo,
+  warn as logWarn,
+} from './logger.js';
 import type {
   PineconeClientConfig,
   SearchResult,

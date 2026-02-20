@@ -87,7 +87,10 @@ export function reassembleByDocument(
     });
 
     const toMerge = sorted.slice(0, maxChunks);
-    const merged_content = toMerge.map((c) => c.content.trim()).filter(Boolean).join(separator);
+    const merged_content = toMerge
+      .map((c) => c.content.trim())
+      .filter(Boolean)
+      .join(separator);
     const first = toMerge[0];
     const best_score = Math.max(...toMerge.map((c) => c.score));
 

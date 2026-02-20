@@ -37,8 +37,7 @@ export function formatSearchResultAsRow(
   if (options?.enrichUrls && options?.namespace) {
     const generated = generateUrlForNamespace(options.namespace, metadata);
     const existingUrl = metadata['url'];
-    const urlIsBlank =
-      typeof existingUrl !== 'string' || existingUrl.trim() === '';
+    const urlIsBlank = typeof existingUrl !== 'string' || existingUrl.trim() === '';
     if (generated.url && urlIsBlank) {
       metadata['url'] = generated.url;
     }

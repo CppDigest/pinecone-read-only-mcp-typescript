@@ -81,10 +81,7 @@ export function registerQueryDocumentsTool(server: McpServer): void {
           return jsonErrorResponse({ status: 'error', message: flowCheck.message });
         }
 
-        const chunkLimit = Math.min(
-          QUERY_DOCUMENTS_MAX_CHUNKS,
-          top_k * CHUNKS_PER_DOCUMENT
-        );
+        const chunkLimit = Math.min(QUERY_DOCUMENTS_MAX_CHUNKS, top_k * CHUNKS_PER_DOCUMENT);
         const client = getPineconeClient();
         const results = await client.query({
           query: query_text.trim(),
