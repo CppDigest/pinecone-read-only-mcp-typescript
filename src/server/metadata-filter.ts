@@ -71,7 +71,6 @@ function validateMetadataFilterValue(value: unknown, path: string[]): string | n
       return `Operator "${key}" at "${path.join('.')}" must use a primitive value.`;
     }
 
-
     const nestedError = validateMetadataFilterValue(nestedValue, [...path, key]);
     if (nestedError) {
       return nestedError;
