@@ -26,6 +26,7 @@ interface CLIOptions {
   logLevel?: string;
 }
 
+/** Parse argv into API key, index name, rerank model, and log level. */
 function parseArgs(): CLIOptions {
   const args = process.argv.slice(2);
   const options: CLIOptions = {};
@@ -62,6 +63,7 @@ function parseArgs(): CLIOptions {
   return options;
 }
 
+/** Print CLI usage and exit. */
 function printHelp(): void {
   console.log(`
 Pinecone Read-Only MCP Server
@@ -94,6 +96,7 @@ Examples:
 `);
 }
 
+/** Initialize config, Pinecone client, MCP server, and stdio transport. */
 async function main(): Promise<void> {
   try {
     const options = parseArgs();

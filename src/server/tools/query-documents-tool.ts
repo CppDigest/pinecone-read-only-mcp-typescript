@@ -21,6 +21,7 @@ import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
  */
 const CHUNKS_PER_DOCUMENT = 50;
 
+/** Register the query_documents tool (reassemble chunks into full documents) on the MCP server. */
 export function registerQueryDocumentsTool(server: McpServer): void {
   server.registerTool(
     'query_documents',

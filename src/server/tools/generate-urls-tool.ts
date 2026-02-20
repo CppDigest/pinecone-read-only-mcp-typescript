@@ -4,6 +4,7 @@ import { generateUrlForNamespace } from '../url-generation.js';
 import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
+/** Get metadata from a record (either record.metadata or the record itself). */
 function extractMetadata(record: Record<string, unknown>): Record<string, unknown> {
   const nested = record['metadata'];
   if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
@@ -12,6 +13,7 @@ function extractMetadata(record: Record<string, unknown>): Record<string, unknow
   return record;
 }
 
+/** Register the generate_urls tool on the MCP server. */
 export function registerGenerateUrlsTool(server: McpServer): void {
   server.registerTool(
     'generate_urls',

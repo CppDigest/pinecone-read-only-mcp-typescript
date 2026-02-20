@@ -47,6 +47,10 @@ function scoreNamespace(
   return { score, reasons: Array.from(new Set(reasons)) };
 }
 
+/**
+ * Rank namespaces by relevance to the query and return the top N.
+ * Uses name and metadata-field matching; on equal score, prefers smaller (more-specific) namespaces.
+ */
 export function rankNamespacesByQuery(
   query: string,
   namespaces: NamespaceInfo[],

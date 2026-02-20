@@ -17,6 +17,7 @@ type CountResponse =
     }
   | { status: 'error'; message: string };
 
+/** Register the count tool on the MCP server. */
 export function registerCountTool(server: McpServer): void {
   server.registerTool(
     'count',

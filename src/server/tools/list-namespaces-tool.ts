@@ -3,6 +3,7 @@ import { getNamespacesWithCache } from '../namespaces-cache.js';
 import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
+/** Register the list_namespaces tool on the MCP server. */
 export function registerListNamespacesTool(server: McpServer): void {
   server.registerTool(
     'list_namespaces',

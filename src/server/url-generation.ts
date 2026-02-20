@@ -14,10 +14,12 @@ type UrlGenerator = (metadata: Record<string, unknown>) => UrlGenerationResult;
 /** Registry of namespace -> URL generator. Built-ins are registered below; more can be added at runtime. */
 const urlGenerators = new Map<string, UrlGenerator>();
 
+/** Return a trimmed non-empty string or null for empty/missing values. */
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+/** Build a mailing-list URL from doc_id or thread_id (e.g. Boost archives). */
 function generatorMailing(metadata: Record<string, unknown>): UrlGenerationResult {
   const docIdOrThread = asString(metadata['doc_id']) ?? asString(metadata['thread_id']);
   if (!docIdOrThread) {
@@ -33,6 +35,7 @@ function generatorMailing(metadata: Record<string, unknown>): UrlGenerationResul
   };
 }
 
+/** Build a Slack message URL from source or team_id/channel_id/doc_id. */
 function generatorSlackCpplang(metadata: Record<string, unknown>): UrlGenerationResult {
   const source = asString(metadata['source']);
   if (source) {

@@ -14,6 +14,7 @@ type CacheEntry = {
 
 let namespacesCache: CacheEntry | null = null;
 
+/** Return namespace list with metadata; uses in-memory cache for FLOW_CACHE_TTL_MS. */
 export async function getNamespacesWithCache(): Promise<{
   data: NamespaceInfo[];
   cache_hit: boolean;
@@ -35,6 +36,7 @@ export async function getNamespacesWithCache(): Promise<{
   return { data, cache_hit: false, expires_at: expiresAt };
 }
 
+/** Clear the namespaces cache so the next call to getNamespacesWithCache refetches. */
 export function invalidateNamespacesCache(): void {
   namespacesCache = null;
 }

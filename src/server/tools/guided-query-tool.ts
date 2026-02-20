@@ -14,6 +14,7 @@ import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
 type GuidedToolName = 'count' | 'query_fast' | 'query_detailed';
 
+/** Register the guided_query orchestrator tool on the MCP server. */
 export function registerGuidedQueryTool(server: McpServer): void {
   server.registerTool(
     'guided_query',

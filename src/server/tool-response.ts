@@ -3,6 +3,7 @@ export type TextPayload = {
   isError?: boolean;
 };
 
+/** Build an MCP tool success payload with JSON-stringified content. */
 export function jsonResponse(payload: unknown): TextPayload {
   return {
     content: [
@@ -14,6 +15,7 @@ export function jsonResponse(payload: unknown): TextPayload {
   };
 }
 
+/** Build an MCP tool error payload with JSON-stringified content and isError: true. */
 export function jsonErrorResponse(payload: unknown): TextPayload {
   return {
     isError: true,

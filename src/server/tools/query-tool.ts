@@ -21,6 +21,7 @@ type QueryExecParams = {
   mode: QueryMode;
 };
 
+/** Run the query tool: validate flow, call Pinecone, format and return results. */
 async function executeQuery(params: QueryExecParams) {
   const { query_text, namespace, top_k, use_reranking, metadata_filter, fields, mode } = params;
   try {
@@ -106,6 +107,7 @@ const baseSchema = {
     ),
 };
 
+/** Register the unified query tool (query_fast / query_detailed) on the MCP server. */
 export function registerQueryTool(server: McpServer): void {
   server.registerTool(
     'query',

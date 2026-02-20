@@ -21,6 +21,7 @@ export { validateMetadataFilter } from './server/metadata-filter.js';
 export { suggestQueryParams } from './server/query-suggestion.js';
 export type { SuggestQueryParamsResult } from './server/query-suggestion.js';
 
+/** Create and configure the MCP server with all tools; returns the server instance. */
 export async function setupServer(): Promise<McpServer> {
   const server = new McpServer(
     {

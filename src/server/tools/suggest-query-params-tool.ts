@@ -6,6 +6,7 @@ import { markSuggested } from '../suggestion-flow.js';
 import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
+/** Register the suggest_query_params tool on the MCP server. */
 export function registerSuggestQueryParamsTool(server: McpServer): void {
   server.registerTool(
     'suggest_query_params',

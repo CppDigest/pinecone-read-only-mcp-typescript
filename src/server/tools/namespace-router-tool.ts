@@ -5,6 +5,7 @@ import { rankNamespacesByQuery } from '../namespace-router.js';
 import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
+/** Register the namespace_router tool on the MCP server. */
 export function registerNamespaceRouterTool(server: McpServer): void {
   server.registerTool(
     'namespace_router',

@@ -22,6 +22,7 @@ function sweepExpired(): void {
   }
 }
 
+/** Record that suggest_query_params was called for this namespace (enables query/count for the flow). */
 export function markSuggested(namespace: string, state: Omit<FlowState, 'updatedAt'>): void {
   sweepExpired();
   stateByNamespace.set(namespace, {
@@ -30,6 +31,7 @@ export function markSuggested(namespace: string, state: Omit<FlowState, 'updated
   });
 }
 
+/** Ensure suggest_query_params was called for this namespace within TTL; returns flow state or error. */
 export function requireSuggested(namespace: string):
   | {
       ok: true;

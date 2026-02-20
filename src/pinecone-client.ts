@@ -64,6 +64,7 @@ export class PineconeClient {
   private sparseIndex: SearchableIndex | null = null;
   private initialized = false;
 
+  /** Create a client with the given config; env vars override index name, rerank model, and top-k. */
   constructor(config: PineconeClientConfig) {
     this.apiKey = config.apiKey;
     this.indexName = config.indexName || process.env['PINECONE_INDEX_NAME'] || DEFAULT_INDEX_NAME;

@@ -9,6 +9,7 @@ import type { PineconeMetadataValue, SearchResult } from '../types.js';
 /** Default metadata keys tried for chunk ordering (RecursiveCharacterTextSplitter often adds these). */
 const CHUNK_ORDER_KEYS = ['chunk_index', 'start_index', 'loc'] as const;
 
+/** Derive a stable document key from hit metadata: document_number → url → doc_id → hit.id. */
 function getDocumentKey(hit: SearchResult): string {
   const m = hit.metadata || {};
   const docNumber = m['document_number'];
@@ -23,6 +24,7 @@ function getDocumentKey(hit: SearchResult): string {
   );
 }
 
+/** Return a numeric order for sorting chunks from metadata (chunk_index, start_index, or loc). */
 function getChunkOrder(metadata: Record<string, PineconeMetadataValue>): number {
   for (const key of CHUNK_ORDER_KEYS) {
     const v = metadata[key];
