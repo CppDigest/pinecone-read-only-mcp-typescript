@@ -1,6 +1,6 @@
 import type { NamespaceInfo } from './namespaces-cache.js';
 
-type RankedNamespace = {
+export type RankedNamespace = {
   namespace: string;
   score: number;
   record_count: number;
@@ -28,7 +28,7 @@ function scoreNamespace(
     score += 3;
     reasons.push('query mentions namespace name');
   } else {
-    const nameTokens = normalizedName.split(/\s+/).filter(Boolean);
+    const nameTokens = [...new Set(normalizedName.split(/\s+/).filter(Boolean))];
     for (const token of nameTokens) {
       if (token.length >= 2 && q.includes(token)) {
         score += 2;
@@ -56,7 +56,7 @@ export function rankNamespacesByQuery(
   namespaces: NamespaceInfo[],
   topN: number
 ): RankedNamespace[] {
-  const limit = Math.max(1, Math.floor(topN));
+  const limit = Number.isFinite(topN) ? Math.max(1, Math.floor(topN)) : 1;
   return namespaces
     .map((ns) => {
       const fields = Object.keys(ns.metadata ?? {});

@@ -9,6 +9,7 @@ const metadataFilterValueSchema: z.ZodType<unknown> = z.lazy(() =>
     z.boolean(),
     z.array(z.string()),
     z.array(z.number()),
+    z.array(z.lazy(() => metadataFilterSchema)),
     z.record(z.string(), metadataFilterValueSchema), // Recursive for nested operators
   ])
 );
@@ -23,6 +24,8 @@ const ALLOWED_FILTER_OPERATORS = new Set([
   '$lte',
   '$in',
   '$nin',
+  '$and',
+  '$or',
 ]);
 
 /** True if value is a string, number, or boolean (allowed for $eq, $gt, etc.). */
@@ -45,7 +48,17 @@ function validateMetadataFilterValue(value: unknown, path: string[]): string | n
     return null;
   }
 
-  if (typeof value !== 'object' || Array.isArray(value)) {
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      const parsed = metadataFilterSchema.safeParse(value[i]);
+      if (!parsed.success) {
+        return `Operator "${path[path.length - 1]}" at "${path.join('.')}" must use an array of filter objects.`;
+      }
+    }
+    return null;
+  }
+
+  if (typeof value !== 'object') {
     return `Unsupported filter value at "${path.join('.')}".`;
   }
 
@@ -69,6 +82,9 @@ function validateMetadataFilterValue(value: unknown, path: string[]): string | n
       !isPrimitiveFilterValue(nestedValue)
     ) {
       return `Operator "${key}" at "${path.join('.')}" must use a primitive value.`;
+    }
+    if ((key === '$and' || key === '$or') && !Array.isArray(nestedValue)) {
+      return `Operator "${key}" at "${path.join('.')}" must use an array of filter objects.`;
     }
 
     const nestedError = validateMetadataFilterValue(nestedValue, [...path, key]);
