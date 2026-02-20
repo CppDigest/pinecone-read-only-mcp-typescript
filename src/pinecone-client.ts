@@ -494,11 +494,6 @@ export class PineconeClient {
         idFallbackCount++;
         docKeys.add(hit._id ?? '');
       }
-      if (!docNumber && !url && !docId) {
-        logWarn(
-          `count(): hit ${hit._id} in namespace "${params.namespace}" had none of the identifier fields (${COUNT_FIELDS.join(', ')})`
-        );
-      }
     }
     if (idFallbackCount > 0) {
       logWarn(
