@@ -56,6 +56,7 @@ export function rankNamespacesByQuery(
   namespaces: NamespaceInfo[],
   topN: number
 ): RankedNamespace[] {
+  const limit = Math.max(1, Math.floor(topN));
   return namespaces
     .map((ns) => {
       const fields = Object.keys(ns.metadata ?? {});
@@ -73,5 +74,5 @@ export function rankNamespacesByQuery(
       // targeted namespaces are chosen over large catch-all ones.
       return a.record_count - b.record_count;
     })
-    .slice(0, topN);
+    .slice(0, limit);
 }
