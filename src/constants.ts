@@ -9,9 +9,19 @@ export const MAX_TOP_K = 100;
 export const MIN_TOP_K = 1;
 /** Namespace and suggestion caches stay valid for 30 minutes. */
 export const FLOW_CACHE_TTL_MS = 30 * 60 * 1000;
-/** Top-k used by the count tool to get total matching documents (Pinecone allows high values). */
+/**
+ * Maximum hits fetched by the count tool to deduplicate into a document count.
+ * When the matching set exceeds this limit the count is capped; callers should
+ * check the `truncated: true` flag in the response to detect this condition.
+ */
 export const COUNT_TOP_K = 10_000;
-/** Minimal fields requested for count (no chunk_text) to reduce payload and cost. */
+/**
+ * Minimal fields fetched for count queries (no `chunk_text`) to reduce payload and cost.
+ * All three fields are tried as deduplication keys in priority order:
+ *   1. `document_number` — canonical document identifier used by most namespaces
+ *   2. `url`            — used as a fallback document key when document_number is absent
+ *   3. `doc_id`         — secondary fallback for namespaces that use a doc_id scheme
+ */
 export const COUNT_FIELDS = ['document_number', 'url', 'doc_id'] as const;
 /** Default lightweight field set for fast queries. */
 export const FAST_QUERY_FIELDS = ['document_number', 'title', 'url', 'author', 'doc_id'] as const;
