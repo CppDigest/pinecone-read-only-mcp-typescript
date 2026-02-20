@@ -22,9 +22,8 @@ type QueryExecParams = {
 };
 
 async function executeQuery(params: QueryExecParams) {
+  const { query_text, namespace, top_k, use_reranking, metadata_filter, fields, mode } = params;
   try {
-    const { query_text, namespace, top_k, use_reranking, metadata_filter, fields, mode } = params;
-
     if (!query_text || !query_text.trim()) {
       const response: QueryResponse = {
         status: 'error',
@@ -73,7 +72,7 @@ async function executeQuery(params: QueryExecParams) {
     };
     return jsonResponse(response);
   } catch (error) {
-    logToolError('query', error);
+    logToolError(mode, error);
     const response: QueryResponse = {
       status: 'error',
       message: getToolErrorMessage(error, 'An error occurred while processing your query'),

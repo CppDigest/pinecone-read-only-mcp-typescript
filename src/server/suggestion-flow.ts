@@ -9,7 +9,21 @@ type FlowState = {
 
 const stateByNamespace = new Map<string, FlowState>();
 
+/**
+ * Evict all entries older than FLOW_CACHE_TTL_MS.
+ * Called on every write so the map stays bounded without a background timer.
+ */
+function sweepExpired(): void {
+  const now = Date.now();
+  for (const [ns, state] of stateByNamespace) {
+    if (now - state.updatedAt > FLOW_CACHE_TTL_MS) {
+      stateByNamespace.delete(ns);
+    }
+  }
+}
+
 export function markSuggested(namespace: string, state: Omit<FlowState, 'updatedAt'>): void {
+  sweepExpired();
   stateByNamespace.set(namespace, {
     ...state,
     updatedAt: Date.now(),

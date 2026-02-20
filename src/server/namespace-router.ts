@@ -7,6 +7,12 @@ type RankedNamespace = {
   reasons: string[];
 };
 
+/**
+ * Score a namespace for relevance to the query using only:
+ * - Query containing the namespace name (normalized)
+ * - Query containing any of the namespace's metadata field names
+ * No hardcoded namespace names or keyword lists; works for any index/namespace.
+ */
 function scoreNamespace(
   query: string,
   namespace: string,
@@ -17,26 +23,17 @@ function scoreNamespace(
   const reasons: string[] = [];
   let score = 0;
 
-  const keywordHints: Record<string, string[]> = {
-    'wg21-papers': ['wg21', 'paper', 'proposal', 'document_number', 'p0', 'standard'],
-    'github-compiler': ['github', 'issue', 'pr', 'repository', 'compiler', 'bug'],
-    'youtube-scripts': ['youtube', 'video', 'script', 'transcript', 'channel'],
-    mailing: ['mailing', 'email', 'thread', 'subject', 'list'],
-    'slack-cpplang': ['slack', 'chat', 'message', 'channel', 'thread'],
-    'blog-posts': ['blog', 'post', 'article'],
-    'cpp-documentation': ['documentation', 'docs', 'reference', 'library'],
-  };
-
-  if (q.includes(name.replace(/[^a-z0-9]/g, ' '))) {
+  const normalizedName = name.replace(/[^a-z0-9]/g, ' ').trim();
+  if (normalizedName && q.includes(normalizedName)) {
     score += 3;
     reasons.push('query mentions namespace name');
-  }
-
-  const hints = keywordHints[name] ?? [];
-  for (const hint of hints) {
-    if (q.includes(hint)) {
-      score += 2;
-      reasons.push(`keyword match: ${hint}`);
+  } else {
+    const nameTokens = normalizedName.split(/\s+/).filter(Boolean);
+    for (const token of nameTokens) {
+      if (token.length >= 2 && q.includes(token)) {
+        score += 2;
+        reasons.push(`query matches namespace token: ${token}`);
+      }
     }
   }
 
@@ -68,6 +65,8 @@ export function rankNamespacesByQuery(
     })
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
+      // On equal score, prefer the smaller (more-specific) namespace so that
+      // targeted namespaces are chosen over large catch-all ones.
       return a.record_count - b.record_count;
     })
     .slice(0, topN);

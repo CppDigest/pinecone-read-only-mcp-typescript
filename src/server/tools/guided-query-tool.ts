@@ -48,7 +48,7 @@ export function registerGuidedQueryTool(server: McpServer): void {
           .boolean()
           .default(true)
           .describe(
-            'If true, enrich result URLs for mailing/slack-Cpplang when metadata.url is missing.'
+            'If true, enrich result URLs using the namespace URL generator when metadata.url is missing (if supported for that namespace).'
           ),
       },
     },
@@ -58,9 +58,9 @@ export function registerGuidedQueryTool(server: McpServer): void {
           user_query,
           namespace: inputNamespace,
           metadata_filter,
-          top_k = 10,
-          preferred_tool = 'auto',
-          enrich_urls = true,
+          top_k,
+          preferred_tool,
+          enrich_urls,
         } = params;
 
         if (!user_query?.trim()) {

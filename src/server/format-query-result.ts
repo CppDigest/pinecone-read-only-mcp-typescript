@@ -21,7 +21,7 @@ export interface QueryResultRow {
 
 /**
  * Format a single search result into a QueryResponse result row.
- * Optionally enrich url from namespace (mailing/slack-Cpplang) when metadata.url is missing.
+ * Optionally enrich url using the namespace URL generator when metadata.url is missing (if supported).
  */
 export function formatSearchResultAsRow(
   doc: SearchResult,
@@ -36,7 +36,10 @@ export function formatSearchResultAsRow(
 
   if (options?.enrichUrls && options?.namespace) {
     const generated = generateUrlForNamespace(options.namespace, metadata);
-    if (generated.url && typeof metadata['url'] !== 'string') {
+    const existingUrl = metadata['url'];
+    const urlIsBlank =
+      typeof existingUrl !== 'string' || existingUrl.trim() === '';
+    if (generated.url && urlIsBlank) {
       metadata['url'] = generated.url;
     }
   }
@@ -45,7 +48,7 @@ export function formatSearchResultAsRow(
   const filename = metadata['filename'];
   const paper_number =
     (typeof docNum === 'string' ? docNum : null) ??
-    (typeof filename === 'string' ? filename.replace('.md', '').toUpperCase() : null) ??
+    (typeof filename === 'string' ? filename.replace(/\.md$/i, '').toUpperCase() : null) ??
     null;
 
   return {

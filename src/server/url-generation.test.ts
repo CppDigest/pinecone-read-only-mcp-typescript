@@ -48,12 +48,26 @@ describe('generateUrlForNamespace', () => {
       channel_id: 'C123456',
       doc_id: '1234567.890',
     });
-    expect(r.url).toBe('https://app.slack.com/T123456789/C123456/p1234567890');
+    expect(r.url).toBe('https://app.slack.com/client/T123456789/C123456/p1234567890');
     expect(r.method).toBe('generated.slack');
   });
 
   it('returns unavailable for unsupported namespace', () => {
     const r = generateUrlForNamespace('wg21-papers', { doc_id: 'x' });
+    expect(r.url).toBeNull();
+    expect(r.method).toBe('unavailable');
+  });
+  it('returns unavailable for mailing when no doc_id or thread_id', () => {
+    const r = generateUrlForNamespace('mailing', { author: 'someone' });
+    expect(r.url).toBeNull();
+    expect(r.method).toBe('unavailable');
+  });
+
+  it('returns unavailable for slack-Cpplang when required fields are missing', () => {
+    const r = generateUrlForNamespace('slack-Cpplang', {
+      team_id: 'T123',
+      // channel_id missing, doc_id missing, no source
+    });
     expect(r.url).toBeNull();
     expect(r.method).toBe('unavailable');
   });

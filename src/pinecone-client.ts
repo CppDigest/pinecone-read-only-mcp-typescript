@@ -7,7 +7,7 @@
  */
 
 import { Pinecone } from '@pinecone-database/pinecone';
-import { debug as logDebug, error as logError, info as logInfo } from './logger.js';
+import { debug as logDebug, error as logError, info as logInfo, warn as logWarn } from './logger.js';
 import type {
   PineconeClientConfig,
   SearchResult,
@@ -16,6 +16,7 @@ import type {
   CountParams,
   CountResult,
   MergedHit,
+  NamespaceHandle,
   SearchableIndex,
   PineconeMetadataValue,
 } from './types.js';
@@ -130,7 +131,7 @@ export class PineconeClient {
         : undefined;
       const namespaces = stats?.namespaces ? Object.keys(stats.namespaces) : [];
 
-      console.error(`Found ${namespaces.length} namespace(s)`);
+      logInfo(`Found ${namespaces.length} namespace(s)`);
 
       // Get metadata info for each namespace by sampling records
       const namespacesInfo = await Promise.all(
@@ -142,15 +143,9 @@ export class PineconeClient {
             // Sample a few records to discover metadata fields
             if (recordCount > 0 && denseIndex.namespace) {
               try {
-                const nsObj = denseIndex.namespace(ns) as {
-                  query: (opts: {
-                    topK: number;
-                    vector: number[];
-                    includeMetadata: boolean;
-                  }) => Promise<{ matches?: Array<{ metadata?: Record<string, unknown> }> }>;
-                } | null;
+                const nsObj: NamespaceHandle = denseIndex.namespace(ns);
                 const sampleQuery =
-                  nsObj && typeof nsObj.query === 'function'
+                  typeof nsObj.query === 'function'
                     ? await nsObj.query({
                         topK: 5,
                         vector: Array(stats?.dimension ?? 1536).fill(0),
@@ -178,7 +173,7 @@ export class PineconeClient {
                   });
                 }
               } catch (queryError) {
-                console.error(`Error sampling records for namespace ${ns}:`, queryError);
+                logError(`Error sampling records for namespace ${ns}`, queryError);
               }
             }
 
@@ -188,7 +183,7 @@ export class PineconeClient {
               metadata: metadataFields,
             };
           } catch (error) {
-            console.error(`Error processing namespace ${ns}:`, error);
+            logError(`Error processing namespace ${ns}`, error);
             return {
               namespace: ns,
               recordCount: 0,
@@ -200,7 +195,7 @@ export class PineconeClient {
 
       return namespacesInfo;
     } catch (error) {
-      console.error('Error listing namespaces:', error);
+      logError('Error listing namespaces', error);
       return [];
     }
   }
@@ -391,11 +386,9 @@ export class PineconeClient {
     if (topK < 1) {
       throw new Error('topK must be at least 1');
     }
-    // Allow up to COUNT_TOP_K when explicitly requested (e.g. for count tool); otherwise cap at MAX_TOP_K
-    const maxAllowed =
-      requestedTopK !== undefined && requestedTopK > MAX_TOP_K ? COUNT_TOP_K : MAX_TOP_K;
-    if (topK > maxAllowed) {
-      topK = maxAllowed;
+
+    if (topK > MAX_TOP_K) {
+      topK = MAX_TOP_K;
     }
 
     // When reranking, Pinecone requires chunk_text in returned fields; add it if user specified fields without it
@@ -419,10 +412,10 @@ export class PineconeClient {
     const sparseHits = sparseResult.status === 'fulfilled' ? sparseResult.value : [];
 
     if (denseResult.status === 'rejected') {
-      console.error('Dense index search failed:', denseResult.reason);
+      logError('Dense index search failed', denseResult.reason);
     }
     if (sparseResult.status === 'rejected') {
-      console.error('Sparse index search failed:', sparseResult.reason);
+      logError('Sparse index search failed', sparseResult.reason);
     }
     if (denseResult.status === 'rejected' && sparseResult.status === 'rejected') {
       throw new Error('Hybrid search failed: both dense and sparse index searches failed.');
@@ -445,7 +438,7 @@ export class PineconeClient {
       }));
     }
 
-    console.error(
+    logInfo(
       `Retrieved ${documents.length} documents from hybrid search (dense: ${denseHits.length}, sparse: ${sparseHits.length})`
     );
 
@@ -470,18 +463,29 @@ export class PineconeClient {
     );
 
     const docKeys = new Set<string>();
+    let idFallbackCount = 0;
     for (const hit of hits) {
       const fields = hit.fields || {};
       const docNumber = fields['document_number'];
       const url = fields['url'];
       const docId = fields['doc_id'];
-      const key =
+      const docKey =
         (typeof docNumber === 'string' ? docNumber : undefined) ??
         (typeof url === 'string' ? url : undefined) ??
-        (typeof docId === 'string' ? docId : undefined) ??
-        hit._id ??
-        '';
-      docKeys.add(key);
+        (typeof docId === 'string' ? docId : undefined);
+      if (docKey !== undefined) {
+        docKeys.add(docKey);
+      } else {
+        // Fall back to chunk ID — this yields a chunk count, not a document count
+        idFallbackCount++;
+        docKeys.add(hit._id ?? '');
+      }
+    }
+    if (idFallbackCount > 0) {
+      logWarn(
+        `count(): ${idFallbackCount} hit(s) in namespace "${params.namespace}" had none of the ` +
+          `identifier fields (${COUNT_FIELDS.join(', ')}); fell back to chunk ID — result may overcount documents`
+      );
     }
 
     const count = docKeys.size;

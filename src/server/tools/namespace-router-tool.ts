@@ -27,7 +27,7 @@ export function registerNamespaceRouterTool(server: McpServer): void {
     },
     async (params) => {
       try {
-        const { user_query, top_n = 3 } = params;
+        const { user_query, top_n } = params;
         if (!user_query?.trim()) {
           return jsonErrorResponse({ status: 'error', message: 'user_query cannot be empty' });
         }

@@ -1,4 +1,4 @@
-type TextPayload = {
+export type TextPayload = {
   content: Array<{ type: 'text'; text: string }>;
   isError?: boolean;
 };

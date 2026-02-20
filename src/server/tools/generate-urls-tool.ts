@@ -18,13 +18,12 @@ export function registerGenerateUrlsTool(server: McpServer): void {
     {
       description:
         'Generate URLs for retrieved results when metadata does not include url and URL is needed. ' +
-        'Supported namespaces: mailing and slack-Cpplang. For mailing, URL is generated from doc_id or thread_id. ' +
-        'For slack-Cpplang, source is preferred when present; otherwise URL is generated from team_id, channel_id, and doc_id.',
+        'Uses the URL generator registered for the given namespace (if any); returns unavailable for namespaces without a generator.',
       inputSchema: {
         namespace: z
           .string()
           .describe(
-            'Target namespace. URL generation currently supports mailing and slack-Cpplang.'
+            'Target namespace. URL generation is supported only for namespaces that have a registered generator (call list_namespaces to discover namespaces).'
           ),
         records: z
           .array(z.record(z.string(), z.unknown()))

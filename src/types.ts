@@ -96,7 +96,25 @@ export interface MergedHit {
   metadata: Record<string, PineconeMetadataValue>;
 }
 
-/** Minimal index interface used for hybrid search (dense/sparse) and namespace discovery. */
+/**
+ * Handle for a specific namespace, returned by SearchableIndex.namespace().
+ * Carries the legacy query() path (vector-based metadata sampling) and the
+ * backward-compatible searchRecords() fallback.
+ */
+export interface NamespaceHandle {
+  query?(opts: { topK: number; vector: number[]; includeMetadata: boolean }): Promise<{
+    matches?: Array<{ metadata?: Record<string, unknown> }>;
+  }>;
+  searchRecords?(params: {
+    query: Record<string, unknown>;
+  }): Promise<{ result?: { hits?: PineconeHit[] } }>;
+}
+
+/**
+ * Minimal top-level index interface for hybrid search (dense/sparse) and namespace discovery.
+ * Methods are optional because the object is obtained via an `as unknown as` cast from the
+ * Pinecone SDK, whose concrete shape can vary across SDK versions.
+ */
 export interface SearchableIndex {
   describeIndexStats?(): Promise<{
     dimension?: number;
@@ -107,11 +125,9 @@ export interface SearchableIndex {
     query: Record<string, unknown>;
     fields?: string[];
   }): Promise<{ result?: { hits?: PineconeHit[] } }>;
-  namespace?(name: string): SearchableIndex & {
-    query?(opts: { topK: number; vector: number[]; includeMetadata: boolean }): Promise<{
-      matches?: Array<{ metadata?: Record<string, unknown> }>;
-    }>;
-  };
+  /** Return a namespace-scoped handle for metadata sampling or legacy record queries. */
+  namespace?(name: string): NamespaceHandle;
+  /** Backward-compatible fallback when the SDK exposes searchRecords on the top-level index. */
   searchRecords?(params: {
     query: Record<string, unknown>;
   }): Promise<{ result?: { hits?: PineconeHit[] } }>;

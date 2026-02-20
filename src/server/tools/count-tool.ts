@@ -49,7 +49,7 @@ export function registerCountTool(server: McpServer): void {
     async (params) => {
       try {
         const { namespace, query_text, metadata_filter } = params;
-        if (!query_text || !query_text.trim()) {
+        if (!query_text.trim()) {
           const response: CountResponse = {
             status: 'error',
             message: 'query_text cannot be empty',
