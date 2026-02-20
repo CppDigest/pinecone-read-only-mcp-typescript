@@ -30,7 +30,7 @@ function generatorMailing(metadata: Record<string, unknown>): UrlGenerationResul
     };
   }
   return {
-    url: `https://lists.boost.org/archives/list/${encodeURIComponent(docIdOrThread)}/`,
+    url: `https://lists.boost.org/archives/list/${docIdOrThread}/`,
     method: 'generated.mailing',
   };
 }
