@@ -21,7 +21,7 @@ export function suggestQueryParams(
   const available = namespaceMetadataFields ? Object.keys(namespaceMetadataFields) : [];
   const keepOnlyAvailable = (fields: string[]) => fields.filter((f) => available.includes(f));
 
-  if (!namespaceMetadataFields || available.length === 0) {
+  if (!namespaceMetadataFields) {
     return {
       suggested_fields: [],
       use_count_tool: false,
@@ -29,6 +29,16 @@ export function suggestQueryParams(
       explanation:
         'Namespace not found or has no metadata fields. Call list_namespaces first, then pass a valid namespace.',
       namespace_found: false,
+    };
+  }
+  if (available.length === 0) {
+    return {
+      suggested_fields: [],
+      use_count_tool: false,
+      recommended_tool: 'query_fast',
+      explanation:
+        'Namespace has no metadata fields. Use list_namespaces to verify the namespace is correct.',
+      namespace_found: true,
     };
   }
 

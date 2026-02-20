@@ -7,7 +7,7 @@
 import type { PineconeMetadataValue, SearchResult } from '../types.js';
 
 /** Default metadata keys tried for chunk ordering (RecursiveCharacterTextSplitter often adds these). */
-const CHUNK_ORDER_KEYS = ['chunk_index', 'chunk_index_0', 'index', 'loc'] as const;
+const CHUNK_ORDER_KEYS = ['chunk_index', 'start_index', 'loc'] as const;
 
 function getDocumentKey(hit: SearchResult): string {
   const m = hit.metadata || {};
@@ -48,6 +48,10 @@ export interface ReassembledDocument {
 /**
  * Group search results by document and merge chunk content.
  * Chunks are ordered by metadata chunk_index (or similar) when present; otherwise retrieval order.
+ * *
+ * Document identity is derived in priority order: document_number → url → doc_id → hit.id.
+ * Chunks whose metadata contains none of the first three keys are grouped by their raw vector ID,
+ * so each such chunk becomes its own single-chunk "document" in the output.
  */
 export function reassembleByDocument(
   results: SearchResult[],
@@ -58,7 +62,7 @@ export function reassembleByDocument(
     contentSeparator?: string;
   }
 ): ReassembledDocument[] {
-  const maxChunks = options?.maxChunksPerDocument ?? 200;
+  const maxChunks = Math.max(1, options?.maxChunksPerDocument ?? 200);
   const separator = options?.contentSeparator ?? '\n\n';
 
   const byDoc = new Map<string, SearchResult[]>();
