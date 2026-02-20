@@ -141,14 +141,16 @@ export function registerGuidedQueryTool(server: McpServer): void {
         const fields =
           suggestion.suggested_fields.length > 0
             ? suggestion.suggested_fields
-            : [...FAST_QUERY_FIELDS];
+            : isFast
+              ? [...FAST_QUERY_FIELDS]
+              : undefined;
         const queryResults = await client.query({
           query: queryText,
           namespace,
           topK: top_k,
           metadataFilter: metadata_filter,
           useReranking: !isFast,
-          fields,
+          fields: fields?.length ? fields : undefined,
         });
         const formattedResults = formatQueryResultRows(queryResults, {
           namespace,
@@ -161,7 +163,7 @@ export function registerGuidedQueryTool(server: McpServer): void {
           namespace,
           metadata_filter: metadata_filter,
           result_count: formattedResults.length,
-          ...(fields.length > 0 ? { fields } : {}),
+          ...(fields?.length ? { fields } : {}),
           results: formattedResults,
         };
         return jsonResponse({

@@ -12,7 +12,13 @@ import { requireSuggested } from '../suggestion-flow.js';
 import { getToolErrorMessage, logToolError } from '../tool-error.js';
 import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 
-/** Approximate chunks to fetch per requested document (to get enough for reassembly). */
+/**
+ * Heuristic multiplier: chunks fetched = top_k × CHUNKS_PER_DOCUMENT, capped by
+ * QUERY_DOCUMENTS_MAX_CHUNKS. Set to 50 as a balance between recall and performance —
+ * documents with more than ~50 chunks may be truncated unless the caller passes a
+ * higher `max_chunks_per_document` (default 200, max 500). Increasing this constant
+ * raises Pinecone fetch latency and memory usage during reassembly.
+ */
 const CHUNKS_PER_DOCUMENT = 50;
 
 export function registerQueryDocumentsTool(server: McpServer): void {

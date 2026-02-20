@@ -332,6 +332,12 @@ export class PineconeClient {
       const rerankResult = await pc.inference.rerank(
         this.rerankModel,
         query,
+        // The Pinecone SDK types constrain document values to `Record<string, string>`,
+        // but the underlying HTTP API accepts any JSON value. We pass MergedHit objects
+        // (metadata may contain number/boolean/string[]) and only `chunk_text` — which is
+        // always a string — is accessed via rankFields. The double cast via `as unknown`
+        // is intentional: it bypasses the SDK's over-narrow type without stringifying
+        // metadata values that we need to read back from the returned documents.
         results as unknown as (string | Record<string, string>)[],
         {
           topN,
@@ -456,6 +462,9 @@ export class PineconeClient {
    * to avoid transferring chunk content, and deduplicates by document for a document-level count.
    */
   async count(params: CountParams): Promise<CountResult> {
+    if (!params.query || !params.query.trim()) {
+      throw new Error('Query cannot be empty');
+    }
     const { denseIndex } = await this.ensureIndexes();
 
     const hits = await this.searchIndex(
@@ -484,6 +493,11 @@ export class PineconeClient {
         // Fall back to chunk ID — this yields a chunk count, not a document count
         idFallbackCount++;
         docKeys.add(hit._id ?? '');
+      }
+      if (!docNumber && !url && !docId) {
+        logWarn(
+          `count(): hit ${hit._id} in namespace "${params.namespace}" had none of the identifier fields (${COUNT_FIELDS.join(', ')})`
+        );
       }
     }
     if (idFallbackCount > 0) {
