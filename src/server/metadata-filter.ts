@@ -50,10 +50,12 @@ function validateMetadataFilterValue(value: unknown, path: string[]): string | n
 
   if (Array.isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      const parsed = metadataFilterSchema.safeParse(value[i]);
-      if (!parsed.success) {
-        return `Operator "${path[path.length - 1]}" at "${path.join('.')}" must use an array of filter objects.`;
+      const item = value[i];
+      if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+        return `Operator "${path[path.length - 1]}" at "${[...path, String(i)].join('.')}" must use an array of filter objects.`;
       }
+      const nestedError = validateMetadataFilter(item as Record<string, unknown>);
+      if (nestedError) return nestedError;
     }
     return null;
   }

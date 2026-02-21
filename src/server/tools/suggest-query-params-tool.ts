@@ -47,9 +47,9 @@ export function registerSuggestQueryParamsTool(server: McpServer): void {
           });
         }
         const response = {
+          ...result,
           status: 'success' as const,
           cache_hit,
-          ...result,
         };
         return jsonResponse(response);
       } catch (error) {
