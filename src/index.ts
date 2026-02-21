@@ -105,12 +105,10 @@ async function main(): Promise<void> {
     const rawLevel =
       options.logLevel ||
       process.env['PINECONE_READ_ONLY_MCP_LOG_LEVEL'] ||
-      process.env['LOG_LEVEL'] ||
       'INFO';
     const logLevel = (
       ['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(rawLevel) ? rawLevel : 'INFO'
     ) as LogLevel;
-    process.env['LOG_LEVEL'] = logLevel;
     setLogLevel(logLevel);
 
     // Get API key

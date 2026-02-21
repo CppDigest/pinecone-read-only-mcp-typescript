@@ -29,6 +29,7 @@ export function registerGenerateUrlsTool(server: McpServer): void {
           ),
         records: z
           .array(z.record(z.string(), z.unknown()))
+          .max(500)
           .describe(
             'Array of records from retrieval results. Each item may be either metadata itself or an object containing a metadata field.'
           ),

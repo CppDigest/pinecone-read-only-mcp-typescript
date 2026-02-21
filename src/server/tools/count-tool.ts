@@ -9,7 +9,7 @@ import { jsonErrorResponse, jsonResponse } from '../tool-response.js';
 const COUNT_RESPONSE_STATUS = 'success' as const;
 type CountResponse =
   | {
-      status: typeof COUNT_RESPONSE_STATUS;
+      status: 'success';
       count: number;
       truncated: boolean;
       namespace: string;
@@ -78,7 +78,7 @@ export function registerCountTool(server: McpServer): void {
           count,
           truncated,
           namespace,
-          metadata_filter: metadata_filter,
+          metadata_filter,
         };
         return jsonResponse(response);
       } catch (error) {

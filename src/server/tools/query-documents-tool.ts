@@ -111,7 +111,7 @@ export function registerQueryDocumentsTool(server: McpServer): void {
           status: 'success',
           query: query_text.trim(),
           namespace,
-          metadata_filter: metadata_filter ?? undefined,
+          metadata_filter,
           result_count: topDocuments.length,
           documents: topDocuments.map((doc) => ({
             document_id: doc.document_id,

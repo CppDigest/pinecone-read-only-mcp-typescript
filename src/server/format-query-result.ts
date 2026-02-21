@@ -46,8 +46,10 @@ export function formatSearchResultAsRow(
   const docNum = metadata['document_number'];
   const filename = metadata['filename'];
   const paper_number =
-    (typeof docNum === 'string' ? docNum : null) ??
-    (typeof filename === 'string' ? filename.replace(/\.md$/i, '').toUpperCase() : null) ??
+    (typeof docNum === 'string' && docNum.length > 0 ? docNum : null) ??
+    (typeof filename === 'string' && filename.length > 0
+      ? filename.replace(/\.md$/i, '').toUpperCase()
+      : null) ??
     null;
 
   return {

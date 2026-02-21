@@ -30,11 +30,17 @@ function shouldLog(level: LogLevel): boolean {
 }
 
 /** Format a single log line: timestamp, level, message, and optional JSON data. */
-function formatMessage(level: string, msg: string, data?: unknown): string {
+function formatMessage(level: LogLevel, msg: string, data?: unknown): string {
   const ts = new Date().toISOString();
   const prefix = `[${ts}] [${level}]`;
   if (data !== undefined) {
-    return `${prefix} ${msg} ${JSON.stringify(data)}`;
+    let serialized: string;
+    try {
+      serialized = JSON.stringify(data);
+    } catch {
+      serialized = String(data);
+    }
+    return `${prefix} ${msg} ${serialized}`;
   }
   return `${prefix} ${msg}`;
 }
@@ -63,10 +69,6 @@ export function warn(msg: string, data?: unknown): void {
 /** Log an ERROR-level message to stderr with optional error (message and stack). */
 export function error(msg: string, err?: unknown): void {
   if (shouldLog('ERROR')) {
-    // const detail = err instanceof Error ? err.message : err !== undefined ? String(err) : undefined;
-    // console.error(
-    //   formatMessage('ERROR', msg, detail !== undefined ? { error: detail } : undefined)
-    // );
     const detail =
       err instanceof Error
         ? { message: err.message, stack: err.stack }

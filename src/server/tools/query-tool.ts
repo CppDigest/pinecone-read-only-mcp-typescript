@@ -25,7 +25,7 @@ type QueryExecParams = {
 async function executeQuery(params: QueryExecParams) {
   const { query_text, namespace, top_k, use_reranking, metadata_filter, fields, mode } = params;
   try {
-    if (!query_text || !query_text.trim()) {
+    if (!query_text.trim()) {
       const response: QueryResponse = {
         status: 'error',
         message: 'Query text cannot be empty',
@@ -128,8 +128,8 @@ export function registerQueryTool(server: McpServer): void {
     async (params) =>
       executeQuery({
         ...params,
-        top_k: params.top_k ?? 10,
-        use_reranking: params.use_reranking ?? true,
+        top_k: params.top_k,
+        use_reranking: params.use_reranking,
         mode: 'query',
       })
   );
@@ -147,7 +147,7 @@ export function registerQueryTool(server: McpServer): void {
     async (params) =>
       executeQuery({
         ...params,
-        top_k: params.top_k ?? 10,
+        top_k: params.top_k,
         use_reranking: false,
         fields: params.fields?.length ? params.fields : [...FAST_QUERY_FIELDS],
         mode: 'query_fast',

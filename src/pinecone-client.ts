@@ -168,7 +168,7 @@ export class PineconeClient {
                         if (!(key in metadataFields)) {
                           metadataFields[key] = inferredType;
                         } else if (
-                          metadataFields[key] === 'object' &&
+                          metadataFields[key] === 'object' || metadataFields[key] === 'array' &&
                           inferredType === 'string[]'
                         ) {
                           // Prefer array type over generic object when we see it in another sample
@@ -227,9 +227,7 @@ export class PineconeClient {
     // Include filter when explicitly provided (matches Python behavior).
     if (metadataFilter !== undefined) {
       queryPayload['filter'] = metadataFilter;
-      if (!options?.fields) {
-        logDebug('Applying metadata filter', metadataFilter);
-      }
+      logDebug('Applying metadata filter', metadataFilter);
     }
 
     try {
