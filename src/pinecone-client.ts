@@ -168,7 +168,7 @@ export class PineconeClient {
                         if (!(key in metadataFields)) {
                           metadataFields[key] = inferredType;
                         } else if (
-                          metadataFields[key] === 'object' || metadataFields[key] === 'array' &&
+                          (metadataFields[key] === 'object' || metadataFields[key] === 'array') &&
                           inferredType === 'string[]'
                         ) {
                           // Prefer array type over generic object when we see it in another sample

@@ -102,10 +102,7 @@ async function main(): Promise<void> {
     const options = parseArgs();
 
     // Set log level (env + logger singleton so tools get correct level)
-    const rawLevel =
-      options.logLevel ||
-      process.env['PINECONE_READ_ONLY_MCP_LOG_LEVEL'] ||
-      'INFO';
+    const rawLevel = options.logLevel || process.env['PINECONE_READ_ONLY_MCP_LOG_LEVEL'] || 'INFO';
     const logLevel = (
       ['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(rawLevel) ? rawLevel : 'INFO'
     ) as LogLevel;
