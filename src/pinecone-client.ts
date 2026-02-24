@@ -328,8 +328,8 @@ export class PineconeClient {
     const pc = this.ensureClient();
 
     try {
-      const rerankResult = await pc.inference.rerank(
-        this.rerankModel,
+      const rerankResult = await pc.inference.rerank({
+        model: this.rerankModel,
         query,
         // The Pinecone SDK types constrain document values to `Record<string, string>`,
         // but the underlying HTTP API accepts any JSON value. We pass MergedHit objects
@@ -337,14 +337,12 @@ export class PineconeClient {
         // always a string — is accessed via rankFields. The double cast via `as unknown`
         // is intentional: it bypasses the SDK's over-narrow type without stringifying
         // metadata values that we need to read back from the returned documents.
-        results as unknown as (string | Record<string, string>)[],
-        {
-          topN,
-          rankFields: ['chunk_text'],
-          returnDocuments: true,
-          parameters: { truncate: 'END' },
-        }
-      );
+        documents: results as unknown as (string | Record<string, string>)[],
+        topN,
+        rankFields: ['chunk_text'],
+        returnDocuments: true,
+        parameters: { truncate: 'END' },
+      });
 
       const reranked: SearchResult[] = [];
       for (const item of rerankResult.data || []) {

@@ -36,9 +36,7 @@ describe('generateUrlForNamespace', () => {
       list_name: 'boost-users',
       doc_id: '12345',
     });
-    expect(r.url).toBe(
-      'https://lists.boost.org/archives/list/boost-users/message/12345/'
-    );
+    expect(r.url).toBe('https://lists.boost.org/archives/list/boost-users/message/12345/');
     expect(r.method).toBe('generated.mailing');
   });
 
@@ -47,9 +45,7 @@ describe('generateUrlForNamespace', () => {
       list_name: 'boost-announce',
       msg_id: '67890',
     });
-    expect(r.url).toBe(
-      'https://lists.boost.org/archives/list/boost-announce/message/67890/'
-    );
+    expect(r.url).toBe('https://lists.boost.org/archives/list/boost-announce/message/67890/');
     expect(r.method).toBe('generated.mailing');
   });
 
