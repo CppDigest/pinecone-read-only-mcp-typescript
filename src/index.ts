@@ -12,6 +12,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { PineconeClient } from './pinecone-client.js';
 import { setupServer, setPineconeClient } from './server.js';
 import { DEFAULT_INDEX_NAME, DEFAULT_RERANK_MODEL } from './constants.js';
+import type { LogLevel } from './config.js';
+import { setLogLevel } from './logger.js';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
@@ -24,6 +26,7 @@ interface CLIOptions {
   logLevel?: string;
 }
 
+/** Parse argv into API key, index name, rerank model, and log level. */
 function parseArgs(): CLIOptions {
   const args = process.argv.slice(2);
   const options: CLIOptions = {};
@@ -60,6 +63,7 @@ function parseArgs(): CLIOptions {
   return options;
 }
 
+/** Print CLI usage and exit. */
 function printHelp(): void {
   console.log(`
 Pinecone Read-Only MCP Server
@@ -92,17 +96,17 @@ Examples:
 `);
 }
 
+/** Initialize config, Pinecone client, MCP server, and stdio transport. */
 async function main(): Promise<void> {
   try {
     const options = parseArgs();
 
-    // Set log level
-    const logLevel =
-      options.logLevel ||
-      process.env['PINECONE_READ_ONLY_MCP_LOG_LEVEL'] ||
-      process.env['LOG_LEVEL'] ||
-      'INFO';
-    process.env['LOG_LEVEL'] = logLevel;
+    // Set log level (env + logger singleton so tools get correct level)
+    const rawLevel = options.logLevel || process.env['PINECONE_READ_ONLY_MCP_LOG_LEVEL'] || 'INFO';
+    const logLevel = (
+      ['DEBUG', 'INFO', 'WARN', 'ERROR'].includes(rawLevel) ? rawLevel : 'INFO'
+    ) as LogLevel;
+    setLogLevel(logLevel);
 
     // Get API key
     const apiKey = options.apiKey || process.env['PINECONE_API_KEY'];

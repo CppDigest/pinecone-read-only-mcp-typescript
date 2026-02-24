@@ -8,26 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- N/A
+
+- `list_namespaces` tool: discovers all namespaces with record counts and sampled metadata fields
+- `namespace_router` tool: ranks namespaces by relevance to a natural-language query
+- `suggest_query_params` tool: mandatory flow gate that recommends fields and tool variant before queries
+- `count` tool: counts unique documents matching a query, with `truncated` flag when results exceed `COUNT_TOP_K`
+- `query_fast` tool: lightweight chunk-level search with minimal field set
+- `query_detailed` tool: chunk-level search with optional semantic reranking
+- `query` tool: unified query entry-point supporting `query_fast` and `query_detailed` modes
+- `guided_query` tool: single-call orchestrator that runs routing → suggestion → execution, returning a `decision_trace`
+- `generate_urls` tool: synthesizes URLs for records whose metadata lacks a `url` field
+- `query_documents` tool: reassembles full documents from chunks grouped by document identifier
+- Centralized structured logger (`src/logger.ts`) with level-gated stderr output and stack-trace capture
+- Dockerfile for containerised deployment
+- `About.md` project documentation covering architecture, tools, and operating principles
 
 ### Changed
-- N/A
 
-### Deprecated
-- N/A
-
-### Removed
-- N/A
+- Modularised server into focused files under `src/server/` (tools, caches, formatters, suggestion flow)
+- CI workflow updated: multi-node matrix (`18.x`, `20.x`, `22.x`), separate quality job with `continue-on-error`
+- Replaced all `console.error` calls in `pinecone-client.ts` with typed `logInfo` / `logDebug` / `logError`
 
 ### Fixed
-- N/A
+
+- Timestamp-based metadata filter now correctly handles numeric epoch values
 
 ### Security
+
 - N/A
 
 ## [0.1.1] - 2026-01-27
 
 ### Changed
+
 - Enhanced TypeScript strict mode with additional compiler checks:
   - Added `noUncheckedIndexedAccess` for safer array/object access
   - Added `noImplicitOverride` to require explicit override keywords
@@ -36,12 +49,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Simplified build script to use standard `tsc` command
 
 ### Fixed
+
 - Fixed build script that was suppressing TypeScript compilation errors with `|| exit 0`
 - Fixed all type safety issues to comply with stricter TypeScript checks
 
 ## [0.1.0] - 2026-01-26
 
 ### Added
+
 - Initial release of TypeScript version
 - Feature parity with Python version
 - Production-ready implementation with:
