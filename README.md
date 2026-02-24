@@ -244,7 +244,7 @@ Suggests which **fields** to request and which tool to use (`count`, `query_fast
 | Parameter    | Type   | Required | Description                                                                                     |
 | ------------ | ------ | -------- | ----------------------------------------------------------------------------------------------- |
 | `namespace`  | string | Yes      | Namespace to query (must match a name from `list_namespaces`)                                   |
-| `user_query` | string | Yes      | User’s question or intent (e.g. "list papers by Lakos with titles", "how many papers by Wong?") |
+| `user_query` | string | Yes      | User’s question or intent (e.g. "list papers by John Doe with titles", "how many papers by Wong?") |
 
 **Returns:** `suggested_fields` (only fields that exist in that namespace), `use_count_tool`, `recommended_tool`, `explanation`, and `namespace_found`.
 
@@ -314,7 +314,7 @@ Rules:
 
 ### `count`
 
-Returns the **unique document count** matching a metadata filter and semantic query. Use for questions like "how many papers by Lakos?" instead of the `query` tool. For performance, the count tool uses **semantic (dense) search only** (no hybrid or lexical) and requests only document identifiers (`document_number`, `url`, `doc_id`)—no chunk content—then deduplicates by document.
+Returns the **unique document count** matching a metadata filter and semantic query. Use for questions like "how many papers by John Doe?" instead of the `query` tool. For performance, the count tool uses **semantic (dense) search only** (no hybrid or lexical) and requests only document identifiers (`document_number`, `url`, `doc_id`)—no chunk content—then deduplicates by document.
 
 **Parameters:**
 
@@ -322,7 +322,7 @@ Returns the **unique document count** matching a metadata filter and semantic qu
 | ----------------- | ------ | -------- | -------------------------------------------------------------------------------------------- |
 | `namespace`       | string | Yes      | Namespace to count in (use `list_namespaces` to discover)                                    |
 | `query_text`      | string | Yes      | Search query; use a broad term (e.g. `"paper"`, `"document"`) when counting by metadata only |
-| `metadata_filter` | object | No       | Same operators as `query` (e.g. `{"author": {"$in": ["John Lakos"]}}` for wg21-papers)       |
+| `metadata_filter` | object | No       | Same operators as `query` (e.g. `{"author": {"$in": ["John Doe"]}}` for wg21-papers)       |
 
 **Returns:** JSON with `count` (unique documents, up to 10,000), and `truncated: true` if there are at least 10,000 matches.
 
@@ -334,7 +334,7 @@ Returns the **unique document count** matching a metadata filter and semantic qu
   "count": 42,
   "truncated": false,
   "namespace": "wg21-papers",
-  "metadata_filter": { "author": { "$in": ["John Lakos"] } }
+  "metadata_filter": { "author": { "$in": ["John Doe"] } }
 }
 ```
 
@@ -402,7 +402,7 @@ Metadata filters allow you to narrow down search results based on document prope
 {"status": "published"}
 
 // Exact string match - NOTE: requires full exact match
-{"author": "John Lakos"}  // Only matches if author field is exactly "John Lakos"
+{"author": "John Doe"}  // Only matches if author field is exactly "John Doe"
 
 // Array field contains value (use $in only for array-type fields)
 {"tags": {"$in": ["cpp", "contracts"]}}  // Only if tags is stored as an array
@@ -431,8 +431,8 @@ Metadata filters allow you to narrow down search results based on document prope
 **Important Limitations:**
 
 - **String fields require EXACT match** - No wildcards, partial matches, or substring searches
-- **Comma-separated strings**: If a field contains `"John Lakos, Herb Sutter"`, you cannot filter for just `"John Lakos"`
-  - You must match the entire string: `{"author": "John Lakos, Herb Sutter"}`
+- **Comma-separated strings**: If a field contains `"John Doe, Herb Sutter"`, you cannot filter for just `"John Doe"`
+  - You must match the entire string: `{"author": "John Doe, Herb Sutter"}`
   - To filter by individual authors, the data must be stored as an array field
 - **`$in` and `$nin` operators**: Only work on array-type fields, not comma-separated strings
 - **Unsupported operators are rejected**: Unknown operators (for example `$regex`) return a validation error

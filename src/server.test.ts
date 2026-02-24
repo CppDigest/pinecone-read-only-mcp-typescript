@@ -12,7 +12,7 @@ describe('suggestQueryParams', () => {
   };
 
   it('suggests count tool and minimal fields for count-style queries', () => {
-    const r = suggestQueryParams(wg21Fields, 'How many papers by Lakos?');
+    const r = suggestQueryParams(wg21Fields, 'How many papers by John Doe?');
     expect(r.use_count_tool).toBe(true);
     expect(r.suggested_fields).toContain('document_number');
     expect(r.suggested_fields).toContain('url');

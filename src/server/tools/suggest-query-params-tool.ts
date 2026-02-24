@@ -25,7 +25,7 @@ export function registerSuggestQueryParamsTool(server: McpServer): void {
         user_query: z
           .string()
           .describe(
-            'The user\'s natural language question or intent (e.g. "list papers by Lakos with titles and links", "how many papers by Wong?", "what do the contracts papers say?").'
+            'The user\'s natural language question or intent (e.g. "list papers by John Doe with titles and links", "how many papers by Wong?", "what do the contracts papers say?").'
           ),
       },
     },
