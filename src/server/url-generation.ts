@@ -19,14 +19,31 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
-/** Build a mailing-list URL from doc_id or thread_id (e.g. Boost archives). */
+/**
+ * Build a mailing-list URL (e.g. Boost archives).
+ * Two cases:
+ * 1. If metadata has list_name and doc_id (or msg_id) and the message id does not contain list_name,
+ *    URL is https://lists.boost.org/archives/list/{list_name}/message/{doc_id}/
+ * 2. Otherwise use doc_id or thread_id as the list path: .../list/{doc_id_or_thread_id}/
+ */
 function generatorMailing(metadata: Record<string, unknown>): UrlGenerationResult {
-  const docIdOrThread = asString(metadata['doc_id']) ?? asString(metadata['thread_id']);
+  const listName = asString(metadata['list_name']);
+  const docId = asString(metadata['doc_id']) ?? asString(metadata['msg_id']);
+  const threadId = asString(metadata['thread_id']);
+
+  if (listName && docId && !docId.includes(listName)) {
+    return {
+      url: `https://lists.boost.org/archives/list/${listName}/message/${docId}/`,
+      method: 'generated.mailing',
+    };
+  }
+
+  const docIdOrThread = docId ?? threadId;
   if (!docIdOrThread) {
     return {
       url: null,
       method: 'unavailable',
-      reason: 'mailing requires doc_id or thread_id to generate URL',
+      reason: 'mailing requires doc_id, msg_id, or thread_id to generate URL',
     };
   }
   return {
@@ -84,9 +101,4 @@ export function generateUrlForNamespace(
     method: 'unavailable',
     reason: `URL generation is not supported for namespace "${namespace}"`,
   };
-}
-
-/** Register a URL generator for a namespace (e.g. for custom indexes). */
-export function registerUrlGenerator(namespace: string, fn: UrlGenerator): void {
-  urlGenerators.set(namespace, fn);
 }

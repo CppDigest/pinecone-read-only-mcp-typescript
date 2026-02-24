@@ -23,10 +23,10 @@ export function registerCountTool(server: McpServer): void {
     'count',
     {
       description:
-        'Get the count of unique documents matching a metadata filter and semantic query. ' +
-        'Use when the user asks for a count (e.g. "how many papers by Lakos?", "Lakos\'s paper count"). ' +
+        'Get the number of unique documents matching a metadata filter and semantic query. ' +
+        'Use when the user asks for a count (e.g. "how many papers by J. Lakos?", "John\'s paper count"). ' +
         'Uses semantic (dense) search only and requests only document identifiers (no content) for performance. ' +
-        'Returns unique document count (deduped by document_number/url/doc_id) up to 10,000; truncated=true if at least that many. ' +
+        'Returns the number of unique documents (deduped by document_number/url/doc_id) up to 10,000; truncated=true if at least that many. ' +
         'Mandatory flow: call suggest_query_params first, then count. ' +
         'Use list_namespaces to discover namespace and metadata fields. ' +
         'For count-by-metadata only, use a broad query_text (e.g. "paper" or "document"). ' +
@@ -43,7 +43,7 @@ export function registerCountTool(server: McpServer): void {
         metadata_filter: metadataFilterSchema
           .optional()
           .describe(
-            'Optional metadata filter. Use exact field names from list_namespaces. E.g. {"author": {"$in": ["John Lakos"]}} for author count.'
+            'Optional metadata filter. Use exact field names from list_namespaces. E.g. {"author": {"$in": ["John Lakos", "J. Lakos"]}} for author count.'
           ),
       },
     },
