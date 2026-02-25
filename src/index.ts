@@ -11,7 +11,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { PineconeClient } from './pinecone-client.js';
 import { setupServer, setPineconeClient } from './server.js';
-import { DEFAULT_INDEX_NAME, DEFAULT_RERANK_MODEL } from './constants.js';
+import { DEFAULT_INDEX_NAME, DEFAULT_RERANK_MODEL, DEFAULT_SPARSE_INDEX_NAME } from './constants.js';
 import type { LogLevel } from './config.js';
 import { setLogLevel } from './logger.js';
 import * as dotenv from 'dotenv';
@@ -22,6 +22,7 @@ dotenv.config();
 interface CLIOptions {
   apiKey?: string;
   indexName?: string;
+  sparseIndexName?: string;
   rerankModel?: string;
   logLevel?: string;
 }
@@ -42,6 +43,10 @@ function parseArgs(): CLIOptions {
         break;
       case '--index-name':
         options.indexName = nextArg;
+        i++;
+        break;
+      case '--sparse-index-name':
+        options.sparseIndexName = nextArg;
         i++;
         break;
       case '--rerank-model':
@@ -71,15 +76,17 @@ Pinecone Read-Only MCP Server
 Usage: pinecone-read-only-mcp [options]
 
 Options:
-  --api-key TEXT        Pinecone API key (or set PINECONE_API_KEY env var)
-  --index-name TEXT     Pinecone index name [default: ${DEFAULT_INDEX_NAME}]
-  --rerank-model TEXT   Reranking model [default: ${DEFAULT_RERANK_MODEL}]
-  --log-level TEXT      Logging level [default: INFO]
-  --help, -h            Show this help message
+  --api-key TEXT           Pinecone API key (or set PINECONE_API_KEY env var)
+  --index-name TEXT        Pinecone index name [default: ${DEFAULT_INDEX_NAME}]
+  --sparse-index-name TEXT Sparse index for keyword_search [default: ${DEFAULT_SPARSE_INDEX_NAME}]
+  --rerank-model TEXT      Reranking model [default: ${DEFAULT_RERANK_MODEL}]
+  --log-level TEXT         Logging level [default: INFO]
+  --help, -h               Show this help message
 
 Environment Variables:
   PINECONE_API_KEY              Pinecone API key
   PINECONE_INDEX_NAME           Pinecone index name
+  PINECONE_SPARSE_INDEX_NAME    Sparse index for keyword_search tool
   PINECONE_RERANK_MODEL         Reranking model name
   PINECONE_READ_ONLY_MCP_LOG_LEVEL  Logging level
 
@@ -119,6 +126,10 @@ async function main(): Promise<void> {
 
     // Get configuration
     const indexName = options.indexName || process.env['PINECONE_INDEX_NAME'] || DEFAULT_INDEX_NAME;
+    const sparseIndexName =
+      options.sparseIndexName ||
+      process.env['PINECONE_SPARSE_INDEX_NAME'] ||
+      DEFAULT_SPARSE_INDEX_NAME;
     const rerankModel =
       options.rerankModel || process.env['PINECONE_RERANK_MODEL'] || DEFAULT_RERANK_MODEL;
 
@@ -126,12 +137,13 @@ async function main(): Promise<void> {
     const client = new PineconeClient({
       apiKey,
       indexName,
+      sparseIndexName,
       rerankModel,
     });
     setPineconeClient(client);
 
     console.error(`Starting Pinecone Read-Only MCP server with stdio transport`);
-    console.error(`Using Pinecone index: ${indexName}`);
+    console.error(`Using Pinecone index: ${indexName} (keyword search: ${sparseIndexName})`);
     console.error(`Log level: ${logLevel}`);
 
     // Setup server

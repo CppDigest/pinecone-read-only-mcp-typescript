@@ -152,6 +152,28 @@ async function test() {
       );
     }
 
+    // Test 5: Keyword (sparse-only) search on pinecone-rag-sparse
+    console.log(`\n🔤 Test 5: Keyword search (sparse-only index)`);
+    console.log(`   Namespace: "${testNamespace}"`);
+    console.log(`   Query: "test query"`);
+    console.log(`   Top K: 3`);
+    try {
+      const startTime5 = Date.now();
+      const results5 = await client.keywordSearch({
+        query: 'test query',
+        namespace: testNamespace,
+        topK: 3,
+      });
+      const duration5 = Date.now() - startTime5;
+      console.log(`✅ Keyword search returned ${results5.length} result(s) in ${duration5}ms`);
+      if (results5.length > 0) {
+        console.log(`   First result score: ${results5[0].score.toFixed(4)}, reranked: ${results5[0].reranked}`);
+      }
+    } catch (kwError) {
+      console.log(`⚠️  Keyword search skipped: ${kwError instanceof Error ? kwError.message : String(kwError)}`);
+      console.log(`   Ensure PINECONE_SPARSE_INDEX_NAME (e.g. pinecone-rag-sparse) exists and has data.`);
+    }
+
     console.log('\n✨ All tests completed successfully!');
     console.log(`\nPerformance comparison:`);
     console.log(`  Without reranking:    ${duration1}ms`);
