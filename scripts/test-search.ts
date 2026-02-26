@@ -152,12 +152,61 @@ async function test() {
       );
     }
 
+    // Test 5: Keyword (sparse-only) search — use namespace from sparse index, not dense
+    let duration5: number | undefined;
+    let test5Skipped = false;
+    const sparseNamespaces = await client.listNamespacesFromKeywordIndex();
+    if (sparseNamespaces.length === 0) {
+      test5Skipped = true;
+      console.log(`\n🔤 Test 5: Keyword search (sparse-only index)`);
+      console.log(
+        `⚠️  Keyword search skipped: sparse index has no namespaces (or index unavailable).`
+      );
+      console.log(
+        `   Ensure PINECONE_SPARSE_INDEX_NAME (e.g. pinecone-rag-sparse or rag-hybrid-sparse) exists and has data.`
+      );
+    } else {
+      const sparseTestNamespace = sparseNamespaces[0].namespace;
+      console.log(`\n🔤 Test 5: Keyword search (sparse-only index)`);
+      console.log(`   Namespace: "${sparseTestNamespace}" (from sparse index)`);
+      console.log(`   Query: "test query"`);
+      console.log(`   Top K: 3`);
+      try {
+        const startTime5 = Date.now();
+        const results5 = await client.keywordSearch({
+          query: 'test query',
+          namespace: sparseTestNamespace,
+          topK: 3,
+        });
+        duration5 = Date.now() - startTime5;
+        console.log(`✅ Keyword search returned ${results5.length} result(s) in ${duration5}ms`);
+        if (results5.length > 0) {
+          console.log(
+            `   First result score: ${results5[0].score.toFixed(4)}, reranked: ${results5[0].reranked}`
+          );
+        }
+      } catch (kwError) {
+        test5Skipped = true;
+        console.log(
+          `⚠️  Keyword search skipped: ${kwError instanceof Error ? kwError.message : String(kwError)}`
+        );
+        console.log(
+          `   Ensure PINECONE_SPARSE_INDEX_NAME exists and namespace "${sparseTestNamespace}" has data.`
+        );
+      }
+    }
+
     console.log('\n✨ All tests completed successfully!');
     console.log(`\nPerformance comparison:`);
     console.log(`  Without reranking:    ${duration1}ms`);
     console.log(`  With reranking:       ${duration2}ms`);
     if (duration3 !== undefined) {
       console.log(`  With metadata filter: ${duration3}ms`);
+    }
+    if (duration5 !== undefined) {
+      console.log(`  Keyword search:       ${duration5}ms`);
+    } else if (test5Skipped) {
+      console.log(`  Keyword search:       skipped`);
     }
     console.log(`  Reranking overhead:   ${duration2 - duration1}ms`);
   } catch (error) {

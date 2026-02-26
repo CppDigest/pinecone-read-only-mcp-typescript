@@ -58,12 +58,13 @@ The server requires a Pinecone API key and supports the following configuration 
 
 ### Environment Variables
 
-| Variable                           | Required | Default              | Description           |
-| ---------------------------------- | -------- | -------------------- | --------------------- |
-| `PINECONE_API_KEY`                 | Yes      | -                    | Your Pinecone API key |
-| `PINECONE_INDEX_NAME`              | No       | `rag-hybrid`         | Pinecone index name   |
-| `PINECONE_RERANK_MODEL`            | No       | `bge-reranker-v2-m3` | Reranking model       |
-| `PINECONE_READ_ONLY_MCP_LOG_LEVEL` | No       | `INFO`               | Logging level         |
+| Variable                           | Required | Default                | Description                                      |
+| ---------------------------------- | -------- | ---------------------- | ------------------------------------------------ |
+| `PINECONE_API_KEY`                 | Yes      | -                      | Your Pinecone API key                            |
+| `PINECONE_INDEX_NAME`              | No       | `rag-hybrid`           | Pinecone index name (dense + sparse for hybrid)   |
+| `PINECONE_SPARSE_INDEX_NAME`       | No       | `pinecone-rag-sparse`  | Sparse index for `keyword_search` tool           |
+| `PINECONE_RERANK_MODEL`            | No       | `bge-reranker-v2-m3`   | Reranking model                                  |
+| `PINECONE_READ_ONLY_MCP_LOG_LEVEL` | No       | `INFO`                 | Logging level                                    |
 
 ### Claude Desktop Configuration
 
@@ -143,11 +144,12 @@ node node_modules/@will-cppa/pinecone-read-only-mcp/dist/index.js --api-key YOUR
 ### Available Options
 
 ```
---api-key TEXT        Pinecone API key (or set PINECONE_API_KEY env var)
---index-name TEXT     Pinecone index name [default: rag-hybrid]
---rerank-model TEXT   Reranking model [default: bge-reranker-v2-m3]
---log-level TEXT      Logging level [default: INFO]
---help, -h            Show help message
+--api-key TEXT           Pinecone API key (or set PINECONE_API_KEY env var)
+--index-name TEXT        Pinecone index name [default: rag-hybrid]
+--sparse-index-name TEXT Sparse index for keyword_search [default: pinecone-rag-sparse]
+--rerank-model TEXT      Reranking model [default: bge-reranker-v2-m3]
+--log-level TEXT         Logging level [default: INFO]
+--help, -h               Show help message
 ```
 
 ## Deployment
@@ -338,6 +340,45 @@ Returns the **unique document count** matching a metadata filter and semantic qu
 }
 ```
 
+### `keyword_search`
+
+Performs **keyword (lexical/sparse-only)** search over the dedicated sparse index (default: `pinecone-rag-sparse`). Use for exact or keyword-style queries. Does not use the dense index or semantic reranking. Call `list_namespaces` first to discover namespaces; `suggest_query_params` is optional.
+
+**Parameters:**
+
+| Parameter         | Type     | Required | Default | Description                                                                 |
+| ----------------- | -------- | -------- | ------- | --------------------------------------------------------------------------- |
+| `query_text`      | string   | Yes      | -       | Search query text (keyword/lexical match)                                   |
+| `namespace`       | string   | Yes      | -       | Namespace to search (use `list_namespaces` to discover)                     |
+| `top_k`           | integer  | No       | `10`    | Number of results to return (1-100)                                         |
+| `metadata_filter` | object   | No       | -       | Optional metadata filter (same operators as `query`)                         |
+| `fields`          | string[] | No       | -       | Optional field names to return; omit for all fields                        |
+
+**Returns:** JSON with `status`, `query`, `namespace`, `index` (sparse index name), `result_count`, and `results` (ids, metadata, scores). Result rows match the `query` tool shape (e.g. `paper_number`, `title`, `author`, `url`, `content`, `score`, `reranked: false`).
+
+**Example response:**
+
+```json
+{
+  "status": "success",
+  "query": "contracts C++",
+  "namespace": "wg21-papers",
+  "index": "pinecone-rag-sparse",
+  "result_count": 5,
+  "results": [
+    {
+      "paper_number": "P0548",
+      "title": "Contracts for C++",
+      "author": "John Doe",
+      "url": "https://...",
+      "content": "...",
+      "score": 0.85,
+      "reranked": false
+    }
+  ]
+}
+```
+
 ### `query`
 
 Performs hybrid semantic search over the specified namespace in the Pinecone index with optional metadata filtering. For **count** questions, use the `count` tool instead.
@@ -469,6 +510,18 @@ npm run build
 ```bash
 npm test
 ```
+
+### Testing the keyword_search tool
+
+1. **Connectivity and keyword search (script):**  
+   Run the search test script (includes a keyword search step against the sparse index):
+   ```bash
+   PINECONE_API_KEY=your-key npm run test:search
+   ```
+   If the sparse index (`pinecone-rag-sparse` by default) does not exist or has no data, the keyword search step is skipped with a warning.
+
+2. **Via MCP client:**  
+   Start the server and call the `keyword_search` tool with `query_text`, `namespace` (from `list_namespaces`), and optional `top_k` or `metadata_filter`. Response shape is the same as the `query` tool (e.g. `results` with ids, metadata, scores; `reranked` is always `false`).
 
 ### Code Quality
 
