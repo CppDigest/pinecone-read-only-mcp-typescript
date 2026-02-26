@@ -511,7 +511,7 @@ npm run build
 npm test
 ```
 
-+### Testing the keyword_search tool
+### Testing the keyword_search tool
 
 1. **Connectivity and keyword search (script):**  
    Run the search test script (includes a keyword search step against the sparse index):
