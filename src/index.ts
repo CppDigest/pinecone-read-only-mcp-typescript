@@ -11,7 +11,11 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { PineconeClient } from './pinecone-client.js';
 import { setupServer, setPineconeClient } from './server.js';
-import { DEFAULT_INDEX_NAME, DEFAULT_RERANK_MODEL, DEFAULT_SPARSE_INDEX_NAME } from './constants.js';
+import {
+  DEFAULT_INDEX_NAME,
+  DEFAULT_RERANK_MODEL,
+  DEFAULT_SPARSE_INDEX_NAME,
+} from './constants.js';
 import type { LogLevel } from './config.js';
 import { setLogLevel } from './logger.js';
 import * as dotenv from 'dotenv';

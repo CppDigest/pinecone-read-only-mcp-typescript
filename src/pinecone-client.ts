@@ -82,6 +82,25 @@ export class PineconeClient {
       config.defaultTopK || parseInt(process.env['PINECONE_TOP_K'] || String(DEFAULT_TOP_K));
   }
 
+  /** Returns the configured sparse index name used for keyword search (runtime value). */
+  getSparseIndexName(): string {
+    return this.sparseIndexName;
+  }
+
+  /**
+   * Normalize and clamp topK from request (validates >= 1, caps at MAX_TOP_K).
+   */
+  private clampTopK(requested: number | undefined): number {
+    let topK = requested !== undefined ? requested : this.defaultTopK;
+    if (topK < 1) {
+      throw new Error('topK must be at least 1');
+    }
+    if (topK > MAX_TOP_K) {
+      topK = MAX_TOP_K;
+    }
+    return topK;
+  }
+
   /**
    * Ensure Pinecone client is initialized
    */
@@ -413,14 +432,7 @@ export class PineconeClient {
       throw new Error('Query cannot be empty');
     }
 
-    let topK = requestedTopK !== undefined ? requestedTopK : this.defaultTopK;
-    if (topK < 1) {
-      throw new Error('topK must be at least 1');
-    }
-
-    if (topK > MAX_TOP_K) {
-      topK = MAX_TOP_K;
-    }
+    const topK = this.clampTopK(requestedTopK);
 
     // When reranking, Pinecone requires chunk_text in returned fields; add it if user specified fields without it
     const searchFields =
@@ -494,13 +506,7 @@ export class PineconeClient {
       throw new Error('Query cannot be empty');
     }
 
-    let topK = requestedTopK !== undefined ? requestedTopK : this.defaultTopK;
-    if (topK < 1) {
-      throw new Error('topK must be at least 1');
-    }
-    if (topK > MAX_TOP_K) {
-      topK = MAX_TOP_K;
-    }
+    const topK = this.clampTopK(requestedTopK);
 
     const keywordIndex = await this.ensureKeywordIndex();
     const searchOptions = requestedFields?.length ? { fields: requestedFields } : undefined;

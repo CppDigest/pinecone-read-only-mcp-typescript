@@ -153,6 +153,8 @@ async function test() {
     }
 
     // Test 5: Keyword (sparse-only) search on pinecone-rag-sparse
+    let duration5: number | undefined;
+    let test5Skipped = false;
     console.log(`\n🔤 Test 5: Keyword search (sparse-only index)`);
     console.log(`   Namespace: "${testNamespace}"`);
     console.log(`   Query: "test query"`);
@@ -164,14 +166,21 @@ async function test() {
         namespace: testNamespace,
         topK: 3,
       });
-      const duration5 = Date.now() - startTime5;
+      duration5 = Date.now() - startTime5;
       console.log(`✅ Keyword search returned ${results5.length} result(s) in ${duration5}ms`);
       if (results5.length > 0) {
-        console.log(`   First result score: ${results5[0].score.toFixed(4)}, reranked: ${results5[0].reranked}`);
+        console.log(
+          `   First result score: ${results5[0].score.toFixed(4)}, reranked: ${results5[0].reranked}`
+        );
       }
     } catch (kwError) {
-      console.log(`⚠️  Keyword search skipped: ${kwError instanceof Error ? kwError.message : String(kwError)}`);
-      console.log(`   Ensure PINECONE_SPARSE_INDEX_NAME (e.g. pinecone-rag-sparse) exists and has data.`);
+      test5Skipped = true;
+      console.log(
+        `⚠️  Keyword search skipped: ${kwError instanceof Error ? kwError.message : String(kwError)}`
+      );
+      console.log(
+        `   Ensure PINECONE_SPARSE_INDEX_NAME (e.g. pinecone-rag-sparse) exists and has data.`
+      );
     }
 
     console.log('\n✨ All tests completed successfully!');
@@ -180,6 +189,11 @@ async function test() {
     console.log(`  With reranking:       ${duration2}ms`);
     if (duration3 !== undefined) {
       console.log(`  With metadata filter: ${duration3}ms`);
+    }
+    if (duration5 !== undefined) {
+      console.log(`  Keyword search:       ${duration5}ms`);
+    } else if (test5Skipped) {
+      console.log(`  Keyword search:       skipped`);
     }
     console.log(`  Reranking overhead:   ${duration2 - duration1}ms`);
   } catch (error) {

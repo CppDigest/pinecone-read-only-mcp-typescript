@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { DEFAULT_SPARSE_INDEX_NAME, MAX_TOP_K, MIN_TOP_K } from '../../constants.js';
+import { MAX_TOP_K, MIN_TOP_K } from '../../constants.js';
 import { getPineconeClient } from '../client-context.js';
 import { formatQueryResultRows } from '../format-query-result.js';
 import { metadataFilterSchema, validateMetadataFilter } from '../metadata-filter.js';
@@ -67,7 +67,7 @@ async function executeKeywordSearch(params: {
     status: 'success',
     query: query_text,
     namespace,
-    index: DEFAULT_SPARSE_INDEX_NAME,
+    index: client.getSparseIndexName(),
     metadata_filter: metadata_filter,
     result_count: formattedResults.length,
     results: formattedResults,
@@ -91,9 +91,7 @@ export function registerKeywordSearchTool(server: McpServer): void {
         query_text: z.string().describe('Search query text (keyword/lexical match).'),
         namespace: z
           .string()
-          .describe(
-            'Namespace to search. Use list_namespaces to discover available namespaces.'
-          ),
+          .describe('Namespace to search. Use list_namespaces to discover available namespaces.'),
         top_k: z
           .number()
           .int()
@@ -117,7 +115,7 @@ export function registerKeywordSearchTool(server: McpServer): void {
         const response = await executeKeywordSearch({
           query_text: params.query_text,
           namespace: params.namespace,
-          top_k: params.top_k ?? 10,
+          top_k: params.top_k,
           metadata_filter: params.metadata_filter,
           fields: params.fields,
         });
