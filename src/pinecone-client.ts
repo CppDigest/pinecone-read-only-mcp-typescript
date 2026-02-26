@@ -158,6 +158,29 @@ export class PineconeClient {
   }
 
   /**
+   * List namespaces present on the keyword (sparse) index used for keyword_search.
+   * Use this to choose a namespace for sparse-only queries instead of the dense index list.
+   */
+  async listNamespacesFromKeywordIndex(): Promise<
+    Array<{ namespace: string; recordCount: number }>
+  > {
+    try {
+      const keywordIndex = await this.ensureKeywordIndex();
+      const stats = keywordIndex.describeIndexStats
+        ? await keywordIndex.describeIndexStats()
+        : undefined;
+      const namespaces = stats?.namespaces ?? {};
+      return Object.entries(namespaces).map(([namespace, info]) => ({
+        namespace,
+        recordCount: info?.recordCount ?? 0,
+      }));
+    } catch (error) {
+      logError('Error listing namespaces from keyword index', error);
+      return [];
+    }
+  }
+
+  /**
    * List all available namespaces with their metadata information
    *
    * Fetches namespaces from the index stats and samples records to discover
