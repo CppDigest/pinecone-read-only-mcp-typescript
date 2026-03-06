@@ -541,7 +541,9 @@ export class PineconeClient {
       };
     });
 
-    logInfo(`Keyword search returned ${documents.length} results from ${this.getSparseIndexName()}`);
+    logInfo(
+      `Keyword search returned ${documents.length} results from ${this.getSparseIndexName()}`
+    );
     return documents;
   }
 
