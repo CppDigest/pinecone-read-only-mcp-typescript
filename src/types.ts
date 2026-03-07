@@ -53,6 +53,16 @@ export interface CountParams {
   metadataFilter?: Record<string, unknown>;
 }
 
+/** Parameters for keyword (sparse-only) search against the dedicated sparse index. */
+export interface KeywordSearchParams {
+  query: string;
+  namespace: string;
+  topK?: number;
+  metadataFilter?: Record<string, unknown>;
+  /** If set, only these fields are returned. Omit for all fields. */
+  fields?: string[];
+}
+
 /** Result of a count request: unique document count (deduped by doc id/url); truncated when at least COUNT_TOP_K. */
 export interface CountResult {
   count: number;

@@ -45,6 +45,7 @@ Features:
 - Count: Use the count tool for "how many X?" questions; it uses semantic search only and minimal fields (no content) for performance, returning unique document count.
 - URL Generation: Use generate_urls to synthesize URLs for namespaces that support it when metadata lacks url.
 - Document reassembly: Use query_documents to get whole documents (chunks grouped and merged by document_number/doc_id/url) for content analysis or summarization.
+- Keyword search: Use keyword_search to query the sparse index (default: rag-hybrid-sparse) for lexical/keyword-only retrieval without reranking.
 
 Usage:
 1. Use list_namespaces (cached for 30 minutes) to discover available namespaces in the index
