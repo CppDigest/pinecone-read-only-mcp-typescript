@@ -84,6 +84,9 @@ export class PineconeClient {
    * Normalize and clamp topK from request (validates >= 1, caps at MAX_TOP_K).
    */
   private clampTopK(requested: number | undefined): number {
+    if (requested !== undefined && !Number.isFinite(requested)) {
+      throw new Error('topK must be a finite number >= 1');
+    }
     let topK = requested !== undefined ? requested : this.defaultTopK;
     if (topK < 1) {
       throw new Error('topK must be at least 1');
@@ -123,7 +126,7 @@ export class PineconeClient {
 
     const pc = this.ensureClient();
     const denseName = this.indexName;
-    const sparseName = `${this.indexName}-sparse`;
+    const sparseName = this.getSparseIndexName();
 
     const dense = pc.index(denseName) as unknown as SearchableIndex;
     const sparse = pc.index(sparseName) as unknown as SearchableIndex;

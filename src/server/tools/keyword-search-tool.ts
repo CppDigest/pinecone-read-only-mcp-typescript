@@ -38,10 +38,20 @@ async function executeKeywordSearch(params: {
 }): Promise<KeywordSearchResponse> {
   const { query_text, namespace, top_k, metadata_filter, fields } = params;
 
-  if (!query_text.trim()) {
+  const normalizedQuery = query_text.trim();
+  const normalizedNamespace = namespace?.trim() ?? '';
+
+  if (!normalizedQuery) {
     return {
       status: 'error',
       message: 'Query text cannot be empty',
+    };
+  }
+
+  if (!normalizedNamespace) {
+    return {
+      status: 'error',
+      message: 'Namespace cannot be empty',
     };
   }
 
@@ -54,19 +64,21 @@ async function executeKeywordSearch(params: {
 
   const client = getPineconeClient();
   const results = await client.keywordSearch({
-    query: query_text.trim(),
-    namespace,
+    query: normalizedQuery,
+    namespace: normalizedNamespace,
     topK: top_k,
     metadataFilter: metadata_filter,
     fields: fields?.length ? fields : undefined,
   });
 
-  const formattedResults = formatQueryResultRows(results, { namespace });
+  const formattedResults = formatQueryResultRows(results, {
+    namespace: normalizedNamespace,
+  });
 
   const response: KeywordSearchResponse = {
     status: 'success',
-    query: query_text,
-    namespace,
+    query: normalizedQuery,
+    namespace: normalizedNamespace,
     index: client.getSparseIndexName(),
     metadata_filter: metadata_filter,
     result_count: formattedResults.length,
