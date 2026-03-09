@@ -20,6 +20,7 @@ import type {
   QueryParams,
   CountParams,
   CountResult,
+  KeywordSearchParams,
   MergedHit,
   NamespaceHandle,
   SearchableIndex,
@@ -74,6 +75,28 @@ export class PineconeClient {
       config.defaultTopK || parseInt(process.env['PINECONE_TOP_K'] || String(DEFAULT_TOP_K));
   }
 
+  /** Returns the sparse index name (same as hybrid sparse: {indexName}-sparse). Used for keyword_search response. */
+  getSparseIndexName(): string {
+    return `${this.indexName}-sparse`;
+  }
+
+  /**
+   * Normalize and clamp topK from request (validates >= 1, caps at MAX_TOP_K).
+   */
+  private clampTopK(requested: number | undefined): number {
+    if (requested !== undefined && !Number.isFinite(requested)) {
+      throw new Error('topK must be a finite number >= 1');
+    }
+    let topK = requested !== undefined ? requested : this.defaultTopK;
+    if (topK < 1) {
+      throw new Error('topK must be at least 1');
+    }
+    if (topK > MAX_TOP_K) {
+      topK = MAX_TOP_K;
+    }
+    return topK;
+  }
+
   /**
    * Ensure Pinecone client is initialized
    */
@@ -103,7 +126,7 @@ export class PineconeClient {
 
     const pc = this.ensureClient();
     const denseName = this.indexName;
-    const sparseName = `${this.indexName}-sparse`;
+    const sparseName = this.getSparseIndexName();
 
     const dense = pc.index(denseName) as unknown as SearchableIndex;
     const sparse = pc.index(sparseName) as unknown as SearchableIndex;
@@ -113,6 +136,29 @@ export class PineconeClient {
 
     logInfo(`Connected to indexes: ${denseName} and ${sparseName}`);
     return { denseIndex: dense, sparseIndex: sparse };
+  }
+
+  /**
+   * List namespaces present on the sparse index (same index used for hybrid sparse and keyword_search).
+   * Use this to choose a namespace for sparse-only queries instead of the dense index list.
+   */
+  async listNamespacesFromKeywordIndex(): Promise<
+    Array<{ namespace: string; recordCount: number }>
+  > {
+    try {
+      const { sparseIndex } = await this.ensureIndexes();
+      const stats = sparseIndex.describeIndexStats
+        ? await sparseIndex.describeIndexStats()
+        : undefined;
+      const namespaces = stats?.namespaces ?? {};
+      return Object.entries(namespaces).map(([namespace, info]) => ({
+        namespace,
+        recordCount: info?.recordCount ?? 0,
+      }));
+    } catch (error) {
+      logError('Error listing namespaces from keyword index', error);
+      return [];
+    }
   }
 
   /**
@@ -390,14 +436,7 @@ export class PineconeClient {
       throw new Error('Query cannot be empty');
     }
 
-    let topK = requestedTopK !== undefined ? requestedTopK : this.defaultTopK;
-    if (topK < 1) {
-      throw new Error('topK must be at least 1');
-    }
-
-    if (topK > MAX_TOP_K) {
-      topK = MAX_TOP_K;
-    }
+    const topK = this.clampTopK(requestedTopK);
 
     // When reranking, Pinecone requires chunk_text in returned fields; add it if user specified fields without it
     const searchFields =
@@ -450,6 +489,64 @@ export class PineconeClient {
       `Retrieved ${documents.length} documents from hybrid search (dense: ${denseHits.length}, sparse: ${sparseHits.length})`
     );
 
+    return documents;
+  }
+
+  /**
+   * Keyword (sparse-only) search against the dedicated sparse index.
+   * Performs lexical/keyword retrieval only—no dense index, no reranking.
+   * Use for exact or keyword-style queries on the configured sparse index.
+   */
+  async keywordSearch(params: KeywordSearchParams): Promise<SearchResult[]> {
+    const {
+      query,
+      namespace,
+      topK: requestedTopK,
+      metadataFilter,
+      fields: requestedFields,
+    } = params;
+
+    if (!query || !query.trim()) {
+      throw new Error('Query cannot be empty');
+    }
+
+    const topK = this.clampTopK(requestedTopK);
+
+    const { sparseIndex } = await this.ensureIndexes();
+    const searchOptions = requestedFields?.length ? { fields: requestedFields } : undefined;
+
+    const hits = await this.searchIndex(
+      sparseIndex,
+      query.trim(),
+      topK,
+      namespace,
+      metadataFilter,
+      searchOptions
+    );
+
+    const documents: SearchResult[] = hits.map((hit) => {
+      const fields = hit.fields || {};
+      let content = '';
+      const metadata: Record<string, PineconeMetadataValue> = {};
+      for (const [key, value] of Object.entries(fields)) {
+        if (key === 'chunk_text') {
+          content = typeof value === 'string' ? value : '';
+        } else {
+          metadata[key] = value as PineconeMetadataValue;
+        }
+      }
+      return {
+        id: hit._id || '',
+        content,
+        score: hit._score || 0,
+        metadata,
+        reranked: false,
+      };
+    });
+
+    logInfo(
+      `Keyword search returned ${documents.length} results from ${this.getSparseIndexName()}`
+    );
     return documents;
   }
 

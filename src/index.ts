@@ -71,15 +71,15 @@ Pinecone Read-Only MCP Server
 Usage: pinecone-read-only-mcp [options]
 
 Options:
-  --api-key TEXT        Pinecone API key (or set PINECONE_API_KEY env var)
-  --index-name TEXT     Pinecone index name [default: ${DEFAULT_INDEX_NAME}]
-  --rerank-model TEXT   Reranking model [default: ${DEFAULT_RERANK_MODEL}]
-  --log-level TEXT      Logging level [default: INFO]
-  --help, -h            Show this help message
+  --api-key TEXT           Pinecone API key (or set PINECONE_API_KEY env var)
+  --index-name TEXT        Pinecone index name [default: ${DEFAULT_INDEX_NAME}]; sparse index is {index-name}-sparse
+  --rerank-model TEXT      Reranking model [default: ${DEFAULT_RERANK_MODEL}]
+  --log-level TEXT         Logging level [default: INFO]
+  --help, -h               Show this help message
 
 Environment Variables:
   PINECONE_API_KEY              Pinecone API key
-  PINECONE_INDEX_NAME           Pinecone index name
+  PINECONE_INDEX_NAME           Pinecone index name (sparse index: {name}-sparse)
   PINECONE_RERANK_MODEL         Reranking model name
   PINECONE_READ_ONLY_MCP_LOG_LEVEL  Logging level
 
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
     setPineconeClient(client);
 
     console.error(`Starting Pinecone Read-Only MCP server with stdio transport`);
-    console.error(`Using Pinecone index: ${indexName}`);
+    console.error(`Using Pinecone index: ${indexName} (sparse: ${indexName}-sparse)`);
     console.error(`Log level: ${logLevel}`);
 
     // Setup server

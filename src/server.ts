@@ -10,6 +10,7 @@ import { SERVER_INSTRUCTIONS, SERVER_NAME, SERVER_VERSION } from './constants.js
 import { registerCountTool } from './server/tools/count-tool.js';
 import { registerGuidedQueryTool } from './server/tools/guided-query-tool.js';
 import { registerGenerateUrlsTool } from './server/tools/generate-urls-tool.js';
+import { registerKeywordSearchTool } from './server/tools/keyword-search-tool.js';
 import { registerListNamespacesTool } from './server/tools/list-namespaces-tool.js';
 import { registerNamespaceRouterTool } from './server/tools/namespace-router-tool.js';
 import { registerQueryDocumentsTool } from './server/tools/query-documents-tool.js';
@@ -38,6 +39,7 @@ export async function setupServer(): Promise<McpServer> {
   registerSuggestQueryParamsTool(server);
   registerCountTool(server);
   registerQueryTool(server);
+  registerKeywordSearchTool(server);
   registerQueryDocumentsTool(server);
   registerGuidedQueryTool(server);
   registerGenerateUrlsTool(server);
