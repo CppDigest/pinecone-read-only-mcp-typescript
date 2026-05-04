@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parsePackageJsonVersion, SERVER_VERSION } from './server-version.js';
+import { PackageJsonNotFoundError, PackageJsonVersionError } from './server-version.errors.js';
+import { parsePackageJsonVersion, resolveServerVersion, SERVER_VERSION } from './server-version.js';
 
 function readRootPackageJson(): string {
   const packageJsonPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json');
@@ -32,6 +34,22 @@ describe('parsePackageJsonVersion', () => {
     expect(parsePackageJsonVersion(PACKAGE_JSON_FIXTURES[2])).toBe('0.1.6');
     expect(parsePackageJsonVersion(PACKAGE_JSON_FIXTURES[3])).toBe('2.3.4');
   });
+
+  it('trims surrounding whitespace on version', () => {
+    expect(parsePackageJsonVersion(JSON.stringify({ version: '  1.2.3  ' }))).toBe('1.2.3');
+  });
+
+  it('throws when version is only whitespace', () => {
+    expect(() => parsePackageJsonVersion(JSON.stringify({ version: '   ' }))).toThrow(
+      PackageJsonVersionError
+    );
+  });
+
+  it('throws when version is not a string', () => {
+    expect(() => parsePackageJsonVersion(JSON.stringify({ version: 1 }))).toThrow(
+      PackageJsonVersionError
+    );
+  });
 });
 
 describe('isServerVersionAligned', () => {
@@ -53,5 +71,24 @@ describe('SERVER_VERSION', () => {
     const packageVersion = parsePackageJsonVersion(readRootPackageJson());
     expect(isServerVersionAligned(SERVER_VERSION, packageVersion)).toBe(true);
     expect(SERVER_VERSION).toBe(packageVersion);
+  });
+});
+
+describe('resolveServerVersion', () => {
+  it('throws when package manifest path does not exist', () => {
+    const missing = join(tmpdir(), `no-package-json-${Date.now()}.json`);
+    expect(() => resolveServerVersion(missing)).toThrow(PackageJsonNotFoundError);
+  });
+
+  it('throws when path is missing even if npm_package_version is set', () => {
+    const missing = join(tmpdir(), `no-package-json-env-${Date.now()}.json`);
+    const prev = process.env.npm_package_version;
+    process.env.npm_package_version = '9.9.9-test';
+    try {
+      expect(() => resolveServerVersion(missing)).toThrow(PackageJsonNotFoundError);
+    } finally {
+      if (prev !== undefined) process.env.npm_package_version = prev;
+      else delete process.env.npm_package_version;
+    }
   });
 });

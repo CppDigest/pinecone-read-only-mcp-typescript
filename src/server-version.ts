@@ -1,9 +1,14 @@
 /**
- * MCP server version — always matches the root package.json "version" field.
+ * MCP server version — read from package.json next to the compiled output.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  throwInvalidVersionFieldType,
+  throwInvalidVersionWhitespaceOnly,
+  throwPackageJsonNotFound,
+} from './server-version.errors.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packageJsonPath = join(__dirname, '..', 'package.json');
@@ -13,11 +18,32 @@ const packageJsonPath = join(__dirname, '..', 'package.json');
  */
 export function parsePackageJsonVersion(raw: string, pathForErrors = 'package.json'): string {
   const parsed = JSON.parse(raw) as { version?: unknown };
-  if (typeof parsed.version !== 'string' || parsed.version.length === 0) {
-    throw new Error(`Invalid or missing "version" in ${pathForErrors}`);
+  if (typeof parsed.version !== 'string') {
+    throwInvalidVersionFieldType(pathForErrors);
   }
-  return parsed.version;
+  const version = parsed.version.trim();
+  if (version.length === 0) {
+    throwInvalidVersionWhitespaceOnly(pathForErrors);
+  }
+  return version;
 }
 
-const raw = readFileSync(packageJsonPath, 'utf8');
-export const SERVER_VERSION = parsePackageJsonVersion(raw, packageJsonPath);
+/**
+ * Resolve the MCP server version from the package manifest on disk (by default,
+ * `package.json` one directory above this module).
+ *
+ * @param overridePath - For tests; otherwise the repo root `package.json` next to compiled output.
+ * @throws PackageJsonNotFoundError if the manifest path does not exist.
+ * @throws PackageJsonVersionError if `"version"` is missing or invalid.
+ * @throws SyntaxError if the file is not valid JSON.
+ */
+export function resolveServerVersion(overridePath?: string): string {
+  const packagePath = overridePath ?? packageJsonPath;
+  if (!existsSync(packagePath)) {
+    throwPackageJsonNotFound(packagePath);
+  }
+  const raw = readFileSync(packagePath, 'utf8');
+  return parsePackageJsonVersion(raw, packagePath);
+}
+
+export const SERVER_VERSION = resolveServerVersion();
