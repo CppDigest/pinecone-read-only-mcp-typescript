@@ -4,38 +4,43 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Future releases are managed automatically by [release-please](https://github.com/googleapis/release-please).
 
 ## [Unreleased]
 
 ### Added
 
-- `list_namespaces` tool: discovers all namespaces with record counts and sampled metadata fields
-- `namespace_router` tool: ranks namespaces by relevance to a natural-language query
-- `suggest_query_params` tool: mandatory flow gate that recommends fields and tool variant before queries
-- `count` tool: counts unique documents matching a query, with `truncated` flag when results exceed `COUNT_TOP_K`
-- `query_fast` tool: lightweight chunk-level search with minimal field set
-- `query_detailed` tool: chunk-level search with optional semantic reranking
-- `query` tool: unified query entry-point supporting `query_fast` and `query_detailed` modes
-- `guided_query` tool: single-call orchestrator that runs routing → suggestion → execution, returning a `decision_trace`
-- `generate_urls` tool: synthesizes URLs for records whose metadata lacks a `url` field
-- `query_documents` tool: reassembles full documents from chunks grouped by document identifier
-- Centralized structured logger (`src/logger.ts`) with level-gated stderr output and stack-trace capture
-- Dockerfile for containerised deployment
-- `About.md` project documentation covering architecture, tools, and operating principles
+- `SERVER_VERSION` is now read from `package.json` at runtime so MCP `serverInfo` always matches the published package version.
+- `--version` CLI flag prints the package version and exits.
+- `list_namespaces` response now includes `expires_at_iso` so clients see the cache expiry as an ISO-8601 timestamp without converting `cache_ttl_seconds`.
+- `docs/` handbook: `TOOLS.md`, `CONFIGURATION.md`, `FAQ.md`, `MIGRATION.md`, `CI_CD.md`, and `docs/README.md` index; root `RELEASING.md` stub points to `docs/RELEASING.md`.
+- `SECURITY.md`, `CONTRIBUTING.md`, and `CODE_OF_CONDUCT.md` for OSS hygiene.
+- `examples/README.md` describing the library embedding sample.
+- GitHub Actions: **multi-OS** CI matrix (Ubuntu, Windows, macOS × Node 18/20/22), **Codecov** upload (Ubuntu + Node 20), **CycloneDX SBOM** artifact, **Release Please**, and **Docker** multi-arch publish to **GHCR**.
+- `src/config.test.ts` and `npm run test:coverage` with Vitest coverage thresholds (see `vitest.config.ts`).
+- `@vitest/coverage-v8` devDependency for coverage reports (`lcov`, `json-summary`, HTML).
 
 ### Changed
 
-- Modularised server into focused files under `src/server/` (tools, caches, formatters, suggestion flow)
-- CI workflow updated: multi-node matrix (`18.x`, `20.x`, `22.x`), separate quality job with `continue-on-error`
-- Replaced all `console.error` calls in `pinecone-client.ts` with typed `logInfo` / `logDebug` / `logError`
+- `.env.example` log-level options corrected to the four levels actually supported (`DEBUG`, `INFO`, `WARN`, `ERROR`); the stale `WARNING`/`CRITICAL` values are gone.
+- README Slack URL example now matches the generator output (`https://app.slack.com/client/{team_id}/{channel_id}/p{messageId}`).
+- README "Comparison with Python Version" no longer claims an identical API interface; the new TypeScript-only tools (`guided_query`, `query_documents`, `keyword_search`, `namespace_router`, `suggest_query_params`, `count`, `generate_urls`) are listed explicitly.
+- `npm run ci` now runs `test:coverage` so merges are gated on coverage thresholds.
+- Dependabot groups related **vitest**, **typescript-eslint**, and **eslint/prettier** updates.
 
-### Fixed
 
-- Timestamp-based metadata filter now correctly handles numeric epoch values
+### Removed
 
-### Security
+- Dead `test:mcp` npm script (referenced a `test-mcp-server.js` file that has never existed).
 
-- N/A
+## [0.1.6] - 2026-04-24
+
+Historical 0.1.x releases (0.1.0 → 0.1.6) shipped the full tool surface
+(`list_namespaces`, `namespace_router`, `suggest_query_params`, `count`,
+`query`, `query_fast`, `query_detailed`, `keyword_search`, `query_documents`,
+`guided_query`, `generate_urls`), the structured `src/logger.ts`, the
+`Dockerfile`, and the modularised `src/server/` layout. See git history for
+details — going forward, all changes are tracked here by release-please.
 
 ## [0.1.1] - 2026-01-27
 
@@ -69,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Environment variable support
 - Full documentation and examples
 
-[Unreleased]: https://github.com/CppDigest/pinecone-read-only-mcp-typescript/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/CppDigest/pinecone-read-only-mcp-typescript/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/CppDigest/pinecone-read-only-mcp-typescript/compare/v0.1.1...v0.1.6
 [0.1.1]: https://github.com/CppDigest/pinecone-read-only-mcp-typescript/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/CppDigest/pinecone-read-only-mcp-typescript/releases/tag/v0.1.0

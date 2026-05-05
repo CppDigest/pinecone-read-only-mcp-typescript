@@ -1,3 +1,12 @@
+/**
+ * Per-namespace URL generation registry.
+ *
+ * Built-in generators cover `mailing` (Boost archive style) and
+ * `slack-Cpplang`. Library consumers can plug in their own with
+ * `registerUrlGenerator(namespace, generator)`.
+ */
+
+/** Outcome of a URL-generation attempt. */
 export type UrlGenerationResult = {
   url: string | null;
   method:
@@ -5,11 +14,19 @@ export type UrlGenerationResult = {
     | 'metadata.source'
     | 'generated.mailing'
     | 'generated.slack'
+    | 'generated.custom'
     | 'unavailable';
   reason?: string;
 };
 
-type UrlGenerator = (metadata: Record<string, unknown>) => UrlGenerationResult;
+/**
+ * Function that builds a URL for a record's metadata.
+ *
+ * Custom generators may return any of the standard `method` values, plus
+ * `'generated.custom'` for namespace-specific generators registered by
+ * library consumers.
+ */
+export type UrlGenerator = (metadata: Record<string, unknown>) => UrlGenerationResult;
 
 /** Registry of namespace -> URL generator. Built-ins are registered below; more can be added at runtime. */
 const urlGenerators = new Map<string, UrlGenerator>();
@@ -77,6 +94,38 @@ function generatorSlackCpplang(metadata: Record<string, unknown>): UrlGeneration
 
 urlGenerators.set('mailing', generatorMailing);
 urlGenerators.set('slack-Cpplang', generatorSlackCpplang);
+
+/**
+ * Register a URL generator for a namespace, replacing any existing entry.
+ *
+ * @param namespace exact namespace name (matches the value returned by `list_namespaces`).
+ * @param generator function that turns a record's metadata into a URL.
+ *
+ * @example
+ * ```ts
+ * import { registerUrlGenerator } from '@will-cppa/pinecone-read-only-mcp';
+ *
+ * registerUrlGenerator('my-docs', (metadata) => {
+ *   const id = typeof metadata.doc_id === 'string' ? metadata.doc_id : null;
+ *   return id
+ *     ? { url: `https://docs.example.com/${id}`, method: 'generated.custom' }
+ *     : { url: null, method: 'unavailable', reason: 'doc_id missing' };
+ * });
+ * ```
+ */
+export function registerUrlGenerator(namespace: string, generator: UrlGenerator): void {
+  urlGenerators.set(namespace, generator);
+}
+
+/** Remove a namespace's URL generator. Returns true if a generator was removed. */
+export function unregisterUrlGenerator(namespace: string): boolean {
+  return urlGenerators.delete(namespace);
+}
+
+/** True when the namespace has a registered URL generator (does not consider `metadata.url`). */
+export function hasUrlGenerator(namespace: string): boolean {
+  return urlGenerators.has(namespace);
+}
 
 /**
  * Generate a URL for a record in the given namespace when metadata.url is missing.

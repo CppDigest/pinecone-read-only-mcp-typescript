@@ -7,6 +7,20 @@
 
 A Model Context Protocol (MCP) server that provides semantic search over Pinecone vector databases using hybrid search (dense + sparse) with reranking.
 
+## Documentation
+
+| Doc | Description |
+|-----|---------------|
+| [docs/README.md](docs/README.md) | Index of all guides |
+| [docs/TOOLS.md](docs/TOOLS.md) | Tool catalog & flows |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Env vars, CLI flags, library config |
+| [docs/FAQ.md](docs/FAQ.md) | Common questions |
+| [docs/MIGRATION.md](docs/MIGRATION.md) | Deprecations & breaking changes |
+| [docs/CI_CD.md](docs/CI_CD.md) | GitHub Actions, SBOM, Docker, releases |
+| [RELEASING.md](RELEASING.md) | Pointer to the full release guide in `docs/` |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
+| [SECURITY.md](SECURITY.md) | Vulnerability reporting |
+
 ## Features
 
 - **Hybrid Search**: Combines dense and sparse embeddings for superior recall
@@ -54,16 +68,19 @@ npm run build
 
 ## Configuration
 
-The server requires a Pinecone API key and supports the following configuration options:
+You need a **Pinecone API key** and (by default) a **dense** index plus matching **sparse** index; see [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for every environment variable and CLI flag.
 
-### Environment Variables
+Quick reference:
 
-| Variable                           | Required | Default                | Description                                      |
-| ---------------------------------- | -------- | ---------------------- | ------------------------------------------------ |
-| `PINECONE_API_KEY`                 | Yes      | -                      | Your Pinecone API key                            |
-| `PINECONE_INDEX_NAME`              | No       | `rag-hybrid`           | Pinecone index name (dense + sparse for hybrid)   |
-| `PINECONE_RERANK_MODEL`            | No       | `bge-reranker-v2-m3`   | Reranking model                                  |
-| `PINECONE_READ_ONLY_MCP_LOG_LEVEL` | No       | `INFO`                 | Logging level                                    |
+| Variable | Required | Default |
+| -------- | -------- | ------- |
+| `PINECONE_API_KEY` | Yes (for live Pinecone) | — |
+| `PINECONE_INDEX_NAME` | No | `rag-hybrid` |
+| `PINECONE_SPARSE_INDEX_NAME` | No | `{index}-sparse` |
+| `PINECONE_READ_ONLY_MCP_LOG_LEVEL` | No | `INFO` (`DEBUG`–`ERROR`) |
+| `PINECONE_READ_ONLY_MCP_LOG_FORMAT` | No | `text` (`json` for log pipelines) |
+
+Run `pinecone-read-only-mcp --help` for CLI equivalents (`--cache-ttl-seconds`, `--request-timeout-ms`, `--disable-suggest-flow`, etc.).
 
 ### Claude Desktop Configuration
 
@@ -301,7 +318,7 @@ Rules:
   Format: `https://lists.boost.org/archives/list/{doc_id_or_thread_id}/`
 - **`slack-Cpplang`**: prefer `source` directly if present; otherwise use `team_id`, `channel_id`, and `doc_id`  
   `message_id = doc_id.replace('.', '')`  
-  Format: `https://app.slack.com/{team_id}/{channel_id}/p{message_id}`
+  Format: `https://app.slack.com/client/{team_id}/{channel_id}/p{message_id}`
 
 **Parameters:**
 
@@ -577,13 +594,20 @@ npm run dev -- --api-key YOUR_API_KEY
 
 ## Comparison with Python Version
 
-This TypeScript implementation provides the same functionality as the [Python version](https://github.com/CppDigest/pinecone-read-only-mcp) with the following benefits:
+This TypeScript implementation grew out of the [Python version](https://github.com/CppDigest/pinecone-read-only-mcp) and now exposes a strict superset of its tool surface, including:
+
+- `guided_query` (single-call orchestrator with decision trace)
+- `query_documents` (full-document reassembly from chunks)
+- `keyword_search` (sparse-index-only retrieval)
+- `namespace_router` and `suggest_query_params` (flow guidance)
+- `count` and `generate_urls`
+
+Other benefits:
 
 - Native Node.js integration
 - Better npm ecosystem integration
 - TypeScript type safety
 - Similar performance characteristics
-- Same API interface
 
 ## Troubleshooting
 

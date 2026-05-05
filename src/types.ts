@@ -5,11 +5,25 @@
 /** Pinecone metadata value types: string, number, boolean, or list of strings */
 export type PineconeMetadataValue = string | number | boolean | string[];
 
+/**
+ * Configuration for `new PineconeClient(config)`.
+ *
+ * `apiKey` is required. All other fields are optional and fall back to
+ * sensible defaults; library consumers usually pass these through from
+ * `ServerConfig`.
+ */
 export interface PineconeClientConfig {
   apiKey: string;
+  /** Dense (hybrid) index name. */
   indexName?: string;
+  /** Sparse index name. Defaults to `${indexName}-sparse`. */
+  sparseIndexName?: string;
+  /** Reranker model identifier. */
   rerankModel?: string;
+  /** Default top-k for `query()`. */
   defaultTopK?: number;
+  /** Per-call timeout (ms) for outbound Pinecone requests. */
+  requestTimeoutMs?: number;
 }
 
 export interface SearchResult {
@@ -76,6 +90,33 @@ export interface ListNamespacesResponse {
   message?: string;
 }
 
+/**
+ * One row in a query response.
+ *
+ * `document_id` is the canonical identifier going forward. `paper_number`
+ * is kept as a deprecated alias for one minor cycle so existing clients
+ * keep working — it is removed in the next major release.
+ */
+export interface QueryResultRowShape {
+  /**
+   * Canonical document identifier (derived from `document_number` or
+   * `filename` metadata). Use this for new code.
+   */
+  document_id: string | null;
+  /**
+   * @deprecated Use `document_id`. Kept for one minor cycle and will be
+   * removed in the next major release.
+   */
+  paper_number: string | null;
+  title: string;
+  author: string;
+  url: string;
+  content: string;
+  score: number;
+  reranked: boolean;
+  metadata?: Record<string, PineconeMetadataValue>;
+}
+
 export interface QueryResponse {
   status: 'success' | 'error';
   mode?: 'query' | 'query_fast' | 'query_detailed';
@@ -85,16 +126,7 @@ export interface QueryResponse {
   result_count?: number;
   /** Present when the query requested specific fields. */
   fields?: string[];
-  results?: Array<{
-    paper_number: string | null;
-    title: string;
-    author: string;
-    url: string;
-    content: string;
-    score: number;
-    reranked: boolean;
-    metadata?: Record<string, PineconeMetadataValue>;
-  }>;
+  results?: QueryResultRowShape[];
   message?: string;
 }
 

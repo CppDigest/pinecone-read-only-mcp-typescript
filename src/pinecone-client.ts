@@ -1,9 +1,10 @@
 /**
  * Pinecone client for hybrid search retrieval.
  *
- * Optimized Pinecone query class that performs hybrid search (dense + sparse)
- * with reranking. Designed for high performance with connection pooling and
- * lazy initialization.
+ * Performs hybrid search (dense + sparse) with optional reranking. Designed
+ * for high performance with connection pooling, lazy initialization, and
+ * bounded retry + timeout around every Pinecone call so a flaky 5xx does
+ * not bubble up immediately to the caller.
  */
 
 import { Pinecone } from '@pinecone-database/pinecone';
@@ -13,6 +14,7 @@ import {
   info as logInfo,
   warn as logWarn,
 } from './logger.js';
+import { withRetry, withTimeout } from './server/retry.js';
 import type {
   PineconeClientConfig,
   SearchResult,
@@ -53,11 +55,20 @@ function inferMetadataFieldType(value: unknown): string {
   return 'object';
 }
 
+/**
+ * Hybrid Pinecone retrieval client.
+ *
+ * The constructor accepts the same `PineconeClientConfig` it always has,
+ * plus optional `sparseIndexName` / `requestTimeoutMs` knobs that flow in
+ * from the unified `ServerConfig`.
+ */
 export class PineconeClient {
   private apiKey: string;
   private indexName: string;
+  private sparseIndexName: string;
   private rerankModel: string;
   private defaultTopK: number;
+  private requestTimeoutMs: number;
 
   // Lazy initialization
   private pc: Pinecone | null = null;
@@ -65,19 +76,62 @@ export class PineconeClient {
   private sparseIndex: SearchableIndex | null = null;
   private initialized = false;
 
-  /** Create a client with the given config; env vars override index name, rerank model, and top-k. */
+  /** Create a client. `sparseIndexName` defaults to `${indexName}-sparse` for backwards compatibility. */
   constructor(config: PineconeClientConfig) {
     this.apiKey = config.apiKey;
-    this.indexName = config.indexName || process.env['PINECONE_INDEX_NAME'] || DEFAULT_INDEX_NAME;
-    this.rerankModel =
-      config.rerankModel || process.env['PINECONE_RERANK_MODEL'] || DEFAULT_RERANK_MODEL;
-    this.defaultTopK =
-      config.defaultTopK || parseInt(process.env['PINECONE_TOP_K'] || String(DEFAULT_TOP_K));
+    this.indexName = config.indexName || DEFAULT_INDEX_NAME;
+    this.sparseIndexName = config.sparseIndexName || `${this.indexName}-sparse`;
+    this.rerankModel = config.rerankModel || DEFAULT_RERANK_MODEL;
+    this.defaultTopK = config.defaultTopK ?? DEFAULT_TOP_K;
+    this.requestTimeoutMs = config.requestTimeoutMs ?? 15_000;
   }
 
-  /** Returns the sparse index name (same as hybrid sparse: {indexName}-sparse). Used for keyword_search response. */
+  /** Returns the configured sparse index name (used for hybrid sparse and keyword_search). */
   getSparseIndexName(): string {
-    return `${this.indexName}-sparse`;
+    return this.sparseIndexName;
+  }
+
+  /** Returns the configured dense (hybrid) index name. */
+  getIndexName(): string {
+    return this.indexName;
+  }
+
+  /**
+   * Verify both dense and sparse indexes exist by issuing a `describeIndexStats`
+   * call against each. Used by the `--check-indexes` startup probe.
+   *
+   * @returns ok=true on success; ok=false with `errors[]` listing the indexes
+   *          that failed (and why), so operators can fix configuration without
+   *          waiting for the first user query.
+   */
+  async checkIndexes(): Promise<{ ok: boolean; errors: string[] }> {
+    const errors: string[] = [];
+    try {
+      const { denseIndex, sparseIndex } = await this.ensureIndexes();
+      try {
+        if (typeof denseIndex.describeIndexStats === 'function') {
+          await this.runWithRetryTimeout(
+            () => denseIndex.describeIndexStats!(),
+            `describeIndexStats(dense:${this.indexName})`
+          );
+        }
+      } catch (e) {
+        errors.push(`dense index "${this.indexName}": ${(e as Error).message}`);
+      }
+      try {
+        if (typeof sparseIndex.describeIndexStats === 'function') {
+          await this.runWithRetryTimeout(
+            () => sparseIndex.describeIndexStats!(),
+            `describeIndexStats(sparse:${this.sparseIndexName})`
+          );
+        }
+      } catch (e) {
+        errors.push(`sparse index "${this.sparseIndexName}": ${(e as Error).message}`);
+      }
+    } catch (e) {
+      errors.push(`Failed to initialize Pinecone client: ${(e as Error).message}`);
+    }
+    return { ok: errors.length === 0, errors };
   }
 
   /**
@@ -126,7 +180,7 @@ export class PineconeClient {
 
     const pc = this.ensureClient();
     const denseName = this.indexName;
-    const sparseName = this.getSparseIndexName();
+    const sparseName = this.sparseIndexName;
 
     const dense = pc.index(denseName) as unknown as SearchableIndex;
     const sparse = pc.index(sparseName) as unknown as SearchableIndex;
@@ -139,6 +193,24 @@ export class PineconeClient {
   }
 
   /**
+   * Wrap a Pinecone call with the configured request timeout and a small
+   * bounded retry. All outbound network calls go through this helper so
+   * resilience is opt-out, not opt-in.
+   */
+  private async runWithRetryTimeout<T>(fn: () => Promise<T>, label: string): Promise<T> {
+    return withRetry(() => withTimeout(fn, { timeoutMs: this.requestTimeoutMs, label }), {
+      retries: 2,
+      backoffMs: 250,
+      onRetry: (attempt, err) =>
+        logWarn(
+          `${label}: retry ${attempt} after error: ${
+            err instanceof Error ? err.message : String(err)
+          }`
+        ),
+    });
+  }
+
+  /**
    * List namespaces present on the sparse index (same index used for hybrid sparse and keyword_search).
    * Use this to choose a namespace for sparse-only queries instead of the dense index list.
    */
@@ -148,7 +220,10 @@ export class PineconeClient {
     try {
       const { sparseIndex } = await this.ensureIndexes();
       const stats = sparseIndex.describeIndexStats
-        ? await sparseIndex.describeIndexStats()
+        ? await this.runWithRetryTimeout(
+            () => sparseIndex.describeIndexStats!(),
+            'describeIndexStats(sparse)'
+          )
         : undefined;
       const namespaces = stats?.namespaces ?? {};
       return Object.entries(namespaces).map(([namespace, info]) => ({
@@ -179,7 +254,10 @@ export class PineconeClient {
 
       // Get index stats to find namespaces
       const stats = denseIndex.describeIndexStats
-        ? await denseIndex.describeIndexStats()
+        ? await this.runWithRetryTimeout(
+            () => denseIndex.describeIndexStats!(),
+            'describeIndexStats(dense)'
+          )
         : undefined;
       const namespaces = stats?.namespaces ? Object.keys(stats.namespaces) : [];
 
@@ -198,11 +276,15 @@ export class PineconeClient {
                 const nsObj: NamespaceHandle = denseIndex.namespace(ns);
                 const sampleQuery =
                   typeof nsObj.query === 'function'
-                    ? await nsObj.query({
-                        topK: 5,
-                        vector: Array(stats?.dimension ?? 1536).fill(0),
-                        includeMetadata: true,
-                      })
+                    ? await this.runWithRetryTimeout(
+                        () =>
+                          nsObj.query!({
+                            topK: 5,
+                            vector: Array(stats?.dimension ?? 1536).fill(0),
+                            includeMetadata: true,
+                          }),
+                        `namespace.query(${ns})`
+                      )
                     : { matches: undefined };
 
                 // Collect unique metadata fields and infer types (including string[])
@@ -290,7 +372,10 @@ export class PineconeClient {
         if (options?.fields?.length) {
           searchOpts.fields = options.fields;
         }
-        const result = await index.search(searchOpts);
+        const result = await this.runWithRetryTimeout(
+          () => index.search!(searchOpts),
+          `index.search(ns=${namespace ?? 'default'})`
+        );
         return result?.result?.hits || [];
       }
 
@@ -309,7 +394,10 @@ export class PineconeClient {
         queryParams.fields = options.fields;
       }
       const result = target.searchRecords
-        ? await target.searchRecords(queryParams)
+        ? await this.runWithRetryTimeout(
+            () => target.searchRecords!(queryParams),
+            `index.searchRecords(ns=${namespace ?? 'default'})`
+          )
         : { result: { hits: [] as PineconeHit[] } };
       return result?.result?.hits || [];
     } catch (error) {
@@ -374,21 +462,26 @@ export class PineconeClient {
     const pc = this.ensureClient();
 
     try {
-      const rerankResult = await pc.inference.rerank({
-        model: this.rerankModel,
-        query,
-        // The Pinecone SDK types constrain document values to `Record<string, string>`,
-        // but the underlying HTTP API accepts any JSON value. We pass MergedHit objects
-        // (metadata may contain number/boolean/string[]) and only `chunk_text` — which is
-        // always a string — is accessed via rankFields. The double cast via `as unknown`
-        // is intentional: it bypasses the SDK's over-narrow type without stringifying
-        // metadata values that we need to read back from the returned documents.
-        documents: results as unknown as (string | Record<string, string>)[],
-        topN,
-        rankFields: ['chunk_text'],
-        returnDocuments: true,
-        parameters: { truncate: 'END' },
-      });
+      // The Pinecone SDK types constrain document values to `Record<string, string>`,
+      // but the underlying HTTP API accepts any JSON value. We pass MergedHit objects
+      // (metadata may contain number/boolean/string[]) and only `chunk_text` — which is
+      // always a string — is accessed via rankFields. The double cast via `as unknown`
+      // is intentional: it bypasses the SDK's over-narrow type without stringifying
+      // metadata values that we need to read back from the returned documents.
+      const rerankDocs = results as unknown as Array<string | Record<string, string>>;
+      const rerankResult = await this.runWithRetryTimeout(
+        () =>
+          pc.inference.rerank({
+            model: this.rerankModel,
+            query,
+            documents: rerankDocs,
+            topN,
+            rankFields: ['chunk_text'],
+            returnDocuments: true,
+            parameters: { truncate: 'END' },
+          }),
+        `inference.rerank(${this.rerankModel})`
+      );
 
       const reranked: SearchResult[] = [];
       for (const item of rerankResult.data || []) {
