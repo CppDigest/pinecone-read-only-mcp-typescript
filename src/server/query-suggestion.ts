@@ -43,7 +43,7 @@ export function suggestQueryParams(
   }
 
   // Count intent: "how many", "count", "number of", etc.
-  if (/\b(how many|count|number of|total number|paper count|documents? count)\b/.test(q)) {
+  if (/\b(how many|count|number of|total number|documents? count|records? count)\b/.test(q)) {
     const fields = keepOnlyAvailable([...COUNT_FIELDS]);
     return {
       suggested_fields: fields.length ? fields : available.slice(0, 5),
