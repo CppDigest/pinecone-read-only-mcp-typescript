@@ -32,7 +32,7 @@ export const MAX_QUERY_DOCUMENTS_TOP_K = 20;
 export const QUERY_DOCUMENTS_MAX_CHUNKS = 500;
 
 export const SERVER_NAME = 'Pinecone Read-Only MCP';
-export const SERVER_VERSION = '0.1.0';
+export { SERVER_VERSION } from './server-version.js';
 
 export const SERVER_INSTRUCTIONS = `A semantic search server that provides hybrid search capabilities over Pinecone vector indexes with automatic namespace discovery.
 
