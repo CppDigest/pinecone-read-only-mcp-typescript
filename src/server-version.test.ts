@@ -2,8 +2,7 @@ import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
-import { PackageJsonNotFoundError, PackageJsonVersionError } from './server-version.errors.js';
+import { describe, expect, it, vi } from 'vitest';
 import { parsePackageJsonVersion, resolveServerVersion, SERVER_VERSION } from './server-version.js';
 
 function readRootPackageJson(): string {
@@ -39,16 +38,24 @@ describe('parsePackageJsonVersion', () => {
     expect(parsePackageJsonVersion(JSON.stringify({ version: '  1.2.3  ' }))).toBe('1.2.3');
   });
 
-  it('throws when version is only whitespace', () => {
-    expect(() => parsePackageJsonVersion(JSON.stringify({ version: '   ' }))).toThrow(
-      PackageJsonVersionError
-    );
+  it('returns default when version is only whitespace', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(parsePackageJsonVersion(JSON.stringify({ version: '   ' }))).toBe('0.0.1');
+      expect(logSpy).toHaveBeenCalled();
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
-  it('throws when version is not a string', () => {
-    expect(() => parsePackageJsonVersion(JSON.stringify({ version: 1 }))).toThrow(
-      PackageJsonVersionError
-    );
+  it('returns default when version is not a string', () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(parsePackageJsonVersion(JSON.stringify({ version: 1 }))).toBe('0.0.1');
+      expect(logSpy).toHaveBeenCalled();
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 });
 
@@ -75,18 +82,27 @@ describe('SERVER_VERSION', () => {
 });
 
 describe('resolveServerVersion', () => {
-  it('throws when package manifest path does not exist', () => {
+  it('returns default version when package manifest path does not exist', () => {
     const missing = join(tmpdir(), `no-package-json-${Date.now()}.json`);
-    expect(() => resolveServerVersion(missing)).toThrow(PackageJsonNotFoundError);
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      expect(resolveServerVersion(missing)).toBe('0.0.1');
+      expect(logSpy).toHaveBeenCalled();
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
-  it('throws when path is missing even if npm_package_version is set', () => {
+  it('returns default version when path is missing even if npm_package_version is set', () => {
     const missing = join(tmpdir(), `no-package-json-env-${Date.now()}.json`);
     const prev = process.env.npm_package_version;
     process.env.npm_package_version = '9.9.9-test';
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     try {
-      expect(() => resolveServerVersion(missing)).toThrow(PackageJsonNotFoundError);
+      expect(resolveServerVersion(missing)).toBe('0.0.1');
+      expect(logSpy).toHaveBeenCalled();
     } finally {
+      logSpy.mockRestore();
       if (prev !== undefined) process.env.npm_package_version = prev;
       else delete process.env.npm_package_version;
     }

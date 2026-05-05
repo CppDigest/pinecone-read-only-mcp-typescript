@@ -4,28 +4,40 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  throwInvalidVersionFieldType,
-  throwInvalidVersionWhitespaceOnly,
-  throwPackageJsonNotFound,
-} from './server-version.errors.js';
+
+const DEFAULT_SERVER_VERSION = '0.0.1';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packageJsonPath = join(__dirname, '..', 'package.json');
 
 /**
  * Read `version` from package.json text (same rules as the live server).
+ * On invalid JSON, missing `version`, or invalid type, logs and returns {@link DEFAULT_SERVER_VERSION}.
  */
 export function parsePackageJsonVersion(raw: string, pathForErrors = 'package.json'): string {
-  const parsed = JSON.parse(raw) as { version?: unknown };
-  if (typeof parsed.version !== 'string') {
-    throwInvalidVersionFieldType(pathForErrors);
+  try {
+    const parsed = JSON.parse(raw) as { version?: unknown };
+    if (typeof parsed.version !== 'string') {
+      console.log(
+        `[server-version] invalid or missing "version" in ${pathForErrors}; using default ${DEFAULT_SERVER_VERSION}`
+      );
+      return DEFAULT_SERVER_VERSION;
+    }
+    const version = parsed.version.trim();
+    if (version.length === 0) {
+      console.log(
+        `[server-version] empty "version" in ${pathForErrors}; using default ${DEFAULT_SERVER_VERSION}`
+      );
+      return DEFAULT_SERVER_VERSION;
+    }
+    return version;
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.log(
+      `[server-version] could not parse ${pathForErrors} (${detail}); using default ${DEFAULT_SERVER_VERSION}`
+    );
+    return DEFAULT_SERVER_VERSION;
   }
-  const version = parsed.version.trim();
-  if (version.length === 0) {
-    throwInvalidVersionWhitespaceOnly(pathForErrors);
-  }
-  return version;
 }
 
 /**
@@ -33,17 +45,25 @@ export function parsePackageJsonVersion(raw: string, pathForErrors = 'package.js
  * `package.json` one directory above this module).
  *
  * @param overridePath - For tests; otherwise the repo root `package.json` next to compiled output.
- * @throws PackageJsonNotFoundError if the manifest path does not exist.
- * @throws PackageJsonVersionError if `"version"` is missing or invalid.
- * @throws SyntaxError if the file is not valid JSON.
  */
 export function resolveServerVersion(overridePath?: string): string {
   const packagePath = overridePath ?? packageJsonPath;
   if (!existsSync(packagePath)) {
-    throwPackageJsonNotFound(packagePath);
+    console.log(
+      `[server-version] package.json not found at ${packagePath}; using default ${DEFAULT_SERVER_VERSION}`
+    );
+    return DEFAULT_SERVER_VERSION;
   }
-  const raw = readFileSync(packagePath, 'utf8');
-  return parsePackageJsonVersion(raw, packagePath);
+  try {
+    const raw = readFileSync(packagePath, 'utf8');
+    return parsePackageJsonVersion(raw, packagePath);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.log(
+      `[server-version] could not read ${packagePath} (${detail}); using default ${DEFAULT_SERVER_VERSION}`
+    );
+    return DEFAULT_SERVER_VERSION;
+  }
 }
 
 export const SERVER_VERSION = resolveServerVersion();
