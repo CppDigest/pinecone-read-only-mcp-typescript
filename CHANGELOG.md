@@ -8,8 +8,11 @@ Tagged releases are published to npm from GitHub Actions when a **GitHub Release
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-25
+
 ### Added
 
+- **`suggest_query_params` in core:** Tool registered by `setupCoreServer` / package-root import (handler lives in core; suggest-flow gate remains off by default via `resolveConfig`). (#223)
 - **Per-source and per-namespace private config:** optional `description` (source-level) and `namespaces` map (`description` + declared `metadata_schema`) in JSON config files (`PINECONE_CONFIG_FILE`), or loaded automatically from the `_mcp_config` Pinecone namespace when not declared locally. Declared schemas skip live sampling; stale declared namespaces surface as `config_warnings` in `list_namespaces`. See [CONFIGURATION.md § Multi-source mode](docs/CONFIGURATION.md#multi-source-mode).
 - **Remote `_mcp_config` schema manifest:** automatic per-source loading of description and namespace declarations from Pinecone at startup (opt out via `PINECONE_DISABLE_REMOTE_SCHEMA` / `--disable-remote-schema`); non-fatal on failure.
 - **`list_namespaces`:** optional per-namespace `schema_source` (`declared` | `sampled`), optional per-namespace `description` (from private config), and top-level `config_warnings` when private config declarations do not match live Pinecone data.
@@ -17,8 +20,9 @@ Tagged releases are published to npm from GitHub Actions when a **GitHub Release
 
 ### Changed
 
-- **Breaking (`list_sources`):** response shape `sources: string[]` → `sources: { name, description? }[]`. Migration: [MIGRATION.md § Unreleased list_sources](docs/MIGRATION.md#unreleased-list_sources-response-shape).
-- **Breaking (library API):** `PineconeClient.listNamespacesWithMetadata()` now returns `{ namespaces, warnings }` instead of a bare array. Migration: [MIGRATION.md § Unreleased PineconeClient.listNamespacesWithMetadata](docs/MIGRATION.md#unreleased-pineconeclientlistnamespaceswithmetadata-return-shape).
+- **Pinecone I/O resilience:** Configurable request timeout and retry with backoff on the Pinecone search/rerank hot path for retryable HTTP statuses (429, 408, 5xx). (#225)
+- **Breaking (`list_sources`):** response shape `sources: string[]` → `sources: { name, description? }[]`. Migration: [MIGRATION.md § 0.5.0 list_sources](docs/MIGRATION.md#050-list_sources-response-shape).
+- **Breaking (library API):** `PineconeClient.listNamespacesWithMetadata()` now returns `{ namespaces, warnings }` instead of a bare array. Migration: [MIGRATION.md § 0.5.0 PineconeClient.listNamespacesWithMetadata](docs/MIGRATION.md#050-pineconeclientlistnamespaceswithmetadata-return-shape).
 - **Dependencies:** Bumped the declared `@modelcontextprotocol/sdk` floor from `^1.25.3` to `^1.29.0` to match the resolved version and ready the server for the upcoming MCP RC protocol revision. `McpServer` construction and tool registration are re-verified by the harness above through `server.connect()` over the SDK in-memory transport; the production `StdioServerTransport` wiring in `src/index.ts` is unchanged and was reviewed, not exercised, by the harness. (#202)
 - **Instructions:** Trimmed operator/install/deploy content (env-var setup, misconfiguration note, Alliance CLI index/rerank defaults, stderr logging config) from `CORE_SERVER_INSTRUCTIONS` and `ALLIANCE_INSTRUCTIONS_APPENDIX` — reduces per-session token cost; no behavior change. Replaced colliding Alliance appendix steps 4–5 with unnumbered "Manual Alliance flow" bullets (includes `PINECONE_DISABLE_SUGGEST_FLOW=true` escape clause). Full detail remains in [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
@@ -28,6 +32,8 @@ Tagged releases are published to npm from GitHub Actions when a **GitHub Release
 
 ### Fixed
 
+- **Credential redaction:** Tool error messages and `source_errors` no longer echo Pinecone API keys or other secrets from upstream error text. (#234)
+- **Retry and timeout classification:** `defaultShouldRetry` and app-timeout handling prefer structured HTTP status, Pinecone SDK error names, and branded `AppTimeoutError` over message-regex heuristics. (#235)
 - **Hybrid query degradation:** When exactly one search leg fails and the surviving leg returns zero hits, `query` / `query_documents` / `guided_query` now set `experimental.hybrid_leg_failed` and `experimental.degraded: true` with `degradation_reason` `dense_leg_failed` or `sparse_leg_failed`, so empty results from a leg failure are distinguishable from a legitimately empty namespace. (#228)
 
 ## [0.4.0] - 2026-06-24
@@ -60,7 +66,7 @@ Tagged releases are published to npm from GitHub Actions when a **GitHub Release
 - **Breaking (core):** `resolveConfig` requires a Pinecone index name and no longer applies Alliance index/rerank defaults. Removed exported `DEFAULT_INDEX_NAME` and `DEFAULT_RERANK_MODEL` from the package root. Rerank is opt-in when `PINECONE_RERANK_MODEL` / `rerankModel` is unset.
 - **Breaking (core):** `setupCoreServer` MCP `instructions` use `CORE_SERVER_INSTRUCTIONS` (includes `guided_query`; no `suggest_query_params`). `resolveConfig` defaults `disableSuggestFlow` to `true` so `query` / `count` / `query_documents` work without Alliance tools. Alliance CLI / `resolveAllianceConfig` unchanged: gate on by default, `ALLIANCE_SERVER_INSTRUCTIONS`.
 - **Alliance CLI / `resolveAllianceConfig`:** When index or rerank env/CLI values are omitted, defaults remain `rag-hybrid` and `bge-reranker-v2-m3` (API-key-only MCP configs unchanged). See [examples/alliance/.env.example](examples/alliance/.env.example).
-- **Breaking (library):** Trimmed public re-exports — `buildQueryExperimental` and `buildGuidedQueryExperimental` removed from package root and `/alliance` entry. See [MIGRATION.md](docs/MIGRATION.md#unreleased-trimmed-library-exports).
+- **Breaking (library):** Trimmed public re-exports — `buildQueryExperimental` and `buildGuidedQueryExperimental` removed from package root and `/alliance` entry. See [MIGRATION.md](docs/MIGRATION.md#050-trimmed-library-exports).
 
 ### Deprecated
 
@@ -166,7 +172,8 @@ details. Newer shipped changes are recorded in this changelog by version.
 - Environment variable support
 - Full documentation and examples
 
-[Unreleased]: https://github.com/cppalliance/pinecone-read-only-mcp-typescript/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/cppalliance/pinecone-read-only-mcp-typescript/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/cppalliance/pinecone-read-only-mcp-typescript/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/cppalliance/pinecone-read-only-mcp-typescript/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/cppalliance/pinecone-read-only-mcp-typescript/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/cppalliance/pinecone-read-only-mcp-typescript/compare/v0.1.6...v0.2.0

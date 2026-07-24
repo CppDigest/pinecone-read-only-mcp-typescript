@@ -6,7 +6,7 @@ This guide is for **library and MCP client authors** upgrading from earlier **0.
 
 Under [semver 0.y.z](https://semver.org/spec/v2.0.0.html#spec-item-4), **0.1.x → 0.2.0 is a breaking minor** — pin `@0.2.0` only after reading this guide.
 
-## Unreleased: `list_sources` response shape
+## 0.5.0: `list_sources` response shape
 
 **Who is affected:** MCP clients parsing `list_sources` success JSON in multi-source mode.
 
@@ -35,7 +35,7 @@ Under [semver 0.y.z](https://semver.org/spec/v2.0.0.html#spec-item-4), **0.1.x �
 
 Read `sources[].name` instead of treating `sources` as `string[]`. `description` is omitted when not configured.
 
-## Unreleased: `PineconeClient.listNamespacesWithMetadata` return shape
+## 0.5.0: `PineconeClient.listNamespacesWithMetadata` return shape
 
 **Who is affected:** Direct library consumers of `PineconeClient` (not MCP tool clients — `list_namespaces` tool response shape is additive only).
 
@@ -235,7 +235,7 @@ Or point `PINECONE_CONFIG_FILE` at a JSON file (see [examples/multi-source/pinec
 
 Single-key configs are unchanged; no migration required when using one API key.
 
-## Unreleased: trimmed library exports
+## 0.5.0: trimmed library exports
 
 **Who is affected:** Library embedders that imported `buildQueryExperimental` or `buildGuidedQueryExperimental` from `@will-cppa/pinecone-read-only-mcp` or `/alliance`.
 
