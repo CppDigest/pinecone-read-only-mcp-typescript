@@ -235,7 +235,7 @@ Or point `PINECONE_CONFIG_FILE` at a JSON file (see [examples/multi-source/pinec
 
 Single-key configs are unchanged; no migration required when using one API key.
 
-## 0.5.0: trimmed library exports
+## 0.3.0: trimmed library exports
 
 **Who is affected:** Library embedders that imported `buildQueryExperimental` or `buildGuidedQueryExperimental` from `@will-cppa/pinecone-read-only-mcp` or `/alliance`.
 
@@ -252,7 +252,7 @@ import { buildQueryExperimental } from '@will-cppa/pinecone-read-only-mcp';
 
 `PineconeClient.query()` return types (`HybridQueryResult`, etc.) and all Zod response schemas remain on the public surface.
 
-### Internal-only re-exports removed (#203)
+## 0.5.0: internal-only re-exports removed (#203)
 
 **Who is affected:** Library embedders that imported any of these internal helpers from the package root or `/alliance`:
 
