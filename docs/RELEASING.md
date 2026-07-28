@@ -19,4 +19,4 @@ Packages are published to npm as **`@will-cppa/pinecone-read-only-mcp`**.
 
 ## Post-publish verification
 
-After a release is on npm, record artifact and CI alignment under [release-verification/](./release-verification/) (see [0.5.0.md](./release-verification/0.5.0.md) for the `v0.5.0` sign-off).
+After a release is on npm, record artifact and CI alignment under [release-verification](./release-verification/README.md) (see [0.5.0 sign-off](./release-verification/0.5.0.md) for `v0.5.0`).

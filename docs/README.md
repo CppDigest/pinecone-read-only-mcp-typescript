@@ -14,6 +14,6 @@ Guides for operators, MCP client authors, and library embedders.
 | [deprecation-policy.md](./deprecation-policy.md) | Deprecation window, semver, CHANGELOG conventions |
 | [templates/breaking-change-release-notes.md](./templates/breaking-change-release-notes.md) | GitHub Release body template for breaking versions |
 | [RELEASING.md](./RELEASING.md) | npm publish via GitHub Releases |
-| [release-verification/](./release-verification/) | Post-publish verification and production-readiness sign-offs |
+| [release-verification/README.md](./release-verification/README.md) | Post-publish verification and production-readiness sign-offs |
 
 The main [README.md](../README.md) remains the high-level overview; deep reference lives here.
