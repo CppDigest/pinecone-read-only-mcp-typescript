@@ -16,3 +16,7 @@ Packages are published to npm as **`@will-cppa/pinecone-read-only-mcp`**.
 ## Version source
 
 `SERVER_VERSION` is read from `package.json` at runtime so MCP `serverInfo` matches the published package.
+
+## Post-publish verification
+
+After a release is on npm, record artifact and CI alignment under [release-verification/](./release-verification/) (see [0.5.0.md](./release-verification/0.5.0.md) for the `v0.5.0` sign-off).
