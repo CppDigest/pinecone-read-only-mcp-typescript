@@ -11,11 +11,11 @@
 
 ### AC 1 — npm registry version and publish time
 
-| Field | Value |
-| ----- | ----- |
-| `npm view … version` | `0.5.0` |
-| `dist-tags.latest` | `0.5.0` |
-| `time['0.5.0']` (UTC) | `2026-07-24T18:41:39.687Z` |
+| Field                  | Value                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `npm view … version`   | `0.5.0`                                                                                                 |
+| `dist-tags.latest`     | `0.5.0`                                                                                                 |
+| `time['0.5.0']` (UTC)  | `2026-07-24T18:41:39.687Z`                                                                              |
 | CHANGELOG release date | `2026-07-25` ([CHANGELOG.md](../CHANGELOG.md#050---2026-07-25); calendar date vs UTC publish timestamp) |
 
 Commands used: `npm view @will-cppa/pinecone-read-only-mcp@0.5.0 version gitHead dist-tags time --json`
@@ -74,11 +74,11 @@ These fields are **identical** in both tarballs (local pack vs registry pack; no
 
 Workflow runs confirmed via the public [GitHub Actions](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions) UI on 2026-07-29 (listed as successful; no failure marker on these runs):
 
-| Check | Run | Link |
-| ----- | --- | ---- |
-| **CI** on merge commit `c28e346` (#236) | CI **#480** — “Updated documents for new release (#236)” on `main` | [CI workflow](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/workflows/ci.yml?query=commit%3Ac28e346efafadbfef98891e523d566eebe957dad) |
-| **CodeQL** on `c28e346` | CodeQL **#505** — same commit on `main` | [CodeQL workflow](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/workflows/codeql.yml?query=commit%3Ac28e346efafadbfef98891e523d566eebe957dad) |
-| **Publish to npm** for release `v0.5.0` | Publish **#11** — “Release v0.5.0 published” (~3m 25s) | [Publish workflow](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/workflows/publish.yml?query=event%3Arelease) |
+| Check                                   | Run                                                                | Link                                                                                                                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **CI** on merge commit `c28e346` (#236) | CI **#480** — “Updated documents for new release (#236)” on `main` | [CI workflow](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/workflows/ci.yml?query=commit%3Ac28e346efafadbfef98891e523d566eebe957dad)         |
+| **CodeQL** on `c28e346`                 | CodeQL **#505** — same commit on `main`                            | [CodeQL workflow](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/workflows/codeql.yml?query=commit%3Ac28e346efafadbfef98891e523d566eebe957dad) |
+| **Publish to npm** for release `v0.5.0` | Publish **#11** — “Release v0.5.0 published” (~3m 25s)             | [Publish workflow](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/workflows/publish.yml?query=event%3Arelease)                                 |
 
 Release: [v0.5.0](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/releases/tag/v0.5.0) · [Commit checks](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/commit/c28e346efafadbfef98891e523d566eebe957dad/checks)
 
@@ -119,4 +119,4 @@ npm pack
 npm pack @will-cppa/pinecone-read-only-mcp@0.5.0
 ```
 
-**Docs link-check:** `npm run docs:link-check` — exit **0** on 2026-07-30 (local, after CodeRabbit doc updates). Add PR CI `quality` job URL here after you push.
+**Docs link-check:** `npm run docs:link-check` — exit **0** on 2026-07-29 (local). Add PR CI `quality` job URL here after you push.
