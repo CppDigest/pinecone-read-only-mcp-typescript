@@ -29,12 +29,33 @@ Compared packed `package/package.json` from:
 1. Local `npm pack` after `npm ci` and `npm run build` on `v0.5.0`
 2. Registry `npm pack @will-cppa/pinecone-read-only-mcp@0.5.0`
 
-These fields are **identical** in both tarballs:
+These fields are **identical** in both tarballs (local pack vs registry pack; no differences in `version`, `files`, `exports`, or `bin`):
 
 - `version`: `0.5.0`
 - `files`: `dist`, `README.md`, `LICENSE`, `CHANGELOG.md`
-- `exports`: `.`, `./alliance`, `./package.json` (paths under `dist/` as in tag `package.json`)
-- `bin.pinecone-read-only-mcp`: `dist/index.js`
+- `bin`:
+
+```json
+{
+  "pinecone-read-only-mcp": "dist/index.js"
+}
+```
+
+- `exports` (same object in both packed `package/package.json` files):
+
+```json
+{
+  ".": {
+    "types": "./dist/core/index.d.ts",
+    "import": "./dist/core/index.js"
+  },
+  "./alliance": {
+    "types": "./dist/alliance/index.d.ts",
+    "import": "./dist/alliance/index.js"
+  },
+  "./package.json": "./package.json"
+}
+```
 
 `npm pack --dry-run` on the tag reported **208** packaged files; registry pack lists the same paths (no `src/`).
 
@@ -63,12 +84,12 @@ Release: [v0.5.0](https://github.com/cppalliance/pinecone-read-only-mcp-typescri
 
 Publish path aligns with [RELEASING.md](./RELEASING.md): `workflow_call` to `ci.yml`, then `npm publish --provenance --access public`; `prepublishOnly` runs `npm run ci`.
 
-### AC 5 — Production-readiness statement
+### AC 5 — Artifact alignment (npm vs tag `v0.5.0`)
 
-**`@will-cppa/pinecone-read-only-mcp@0.5.0` on npm is production-ready** relative to repository tag `v0.5.0`:
+**Artifact verification is complete.** The published npm package matches repository tag `v0.5.0` (`c28e346`) for the checks in AC 1–4:
 
 - Registry version and `gitHead` align with tag `c28e346`.
-- Packed manifest (`version`, `files`, `exports`, `bin`) matches the tagged `package.json`.
+- Packed manifest (`version`, `files`, `exports`, `bin`) matches the tagged `package.json` (see AC 2).
 - Published `dist/` matches a clean tag build (no test sources in artifact; `dist/**` hash parity with registry).
 - CI (#480), CodeQL (#505), and Publish (#11) for the `v0.5.0` release completed successfully per GitHub Actions (see AC 4).
 
@@ -76,13 +97,16 @@ No re-publish or version bump is required based on this verification.
 
 **Registry tarball:** `https://registry.npmjs.org/@will-cppa/pinecone-read-only-mcp/-/pinecone-read-only-mcp-0.5.0.tgz` (`dist.shasum` `f912f88fee5a8499eadac70ddcbf4a25660fbe76`).
 
+**Process sign-off:** Organizational production-readiness sign-off (AC 6) remains **pending** until this documentation PR is approved and merged. Until then, do not treat the release process as fully signed off in-repo.
+
 ### AC 6 — Pull request and review
 
 Sign-off is committed under `docs/`. **Requires:**
 
-- [ ] PR opened with this file and doc index updates ([README.md](./README.md), [RELEASING.md](./RELEASING.md))
+- [x] PR opened with this file and doc index updates ([README.md](./README.md), [RELEASING.md](./RELEASING.md)) — [PR #242](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/pull/242)
 - [ ] ≥ 1 reviewer approval
-- [ ] PR URL recorded here after merge: _pending (assignee: branch, commit, push, open PR)_
+- [ ] Approver and approval date recorded here after review
+- [ ] Merged PR URL recorded here after merge (same as #242 when merged)
 
 ## Commands reference (replay on tag)
 
@@ -95,4 +119,4 @@ npm pack
 npm pack @will-cppa/pinecone-read-only-mcp@0.5.0
 ```
 
-Recommended before merge: `npm run docs:link-check`
+**Docs link-check:** `npm run docs:link-check` — exit **0** on 2026-07-30 (local, after CodeRabbit doc updates). Add PR CI `quality` job URL here after you push.
