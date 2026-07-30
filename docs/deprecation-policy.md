@@ -32,7 +32,7 @@ Renames may ship the **replacement immediately** alongside the deprecated alias 
 
 APIs deprecated **before** this policy was published follow the removal target recorded in CHANGELOG and source comments at deprecation time. The `paper_number` field on query result rows (use `document_id` instead) was deprecated in **0.2.0** with removal planned no earlier than the **next major** release after `1.0.0`; it will not be removed in a `0.y` minor without an explicit CHANGELOG entry and MIGRATION update.
 
-### Active deprecations - legacy module facades
+### Active deprecations: legacy module facades
 
 Module-level singleton facades delegate to `getDefaultServerContext()`. Migrate to **`ServerContext`** instance methods via `createServer(config)` and pass `{ context: ctx }` to `setupCoreServer` / `setupAllianceServer`. Deprecated in **`0.3.0`**; earliest removal **`0.5.0`** (per [Deprecation window](#deprecation-window) above). See [MIGRATION.md § Legacy module-facade deprecations](./MIGRATION.md#030-legacy-module-facade-deprecations).
 
@@ -132,7 +132,7 @@ Each breaking bullet should state:
 
 - **What changed** — concrete behavior or schema difference.
 - **Who is affected** — MCP clients, library embedders, operators, etc.
-- **Migration** — link to [MIGRATION.md](./MIGRATION.md#anchor) (or “see MIGRATION.md § …”).
+- **Migration** — link to the specific [MIGRATION.md](./MIGRATION.md) heading covering the change (or “see MIGRATION.md § …”).
 
 ### Deprecated entries
 

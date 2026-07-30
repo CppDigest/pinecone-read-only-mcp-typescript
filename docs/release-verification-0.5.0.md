@@ -65,7 +65,7 @@ These fields are **identical** in both tarballs (local pack vs registry pack; no
 - **No** `*.test.*` (or other test sources) under packed `dist/`.
 - **File path set** under `package/` (local vs registry): identical.
 - **`dist/**` content:** SHA-256 compared for every file under `dist/` in both tarballs → **0 mismatches** (functional parity of compiled output).
-- **Tarball bytes:** full `.tgz` SHA-256 differs between local pack and registry (expected: npm metadata / root doc packaging); registry tarball matches npm `dist.shasum` `f912f88fee5a8499eadac70ddcbf4a25660fbe76`.
+- **Tarball bytes:** full `.tgz` SHA-256 differs between local pack and registry. This is expected from tar entry ordering and gzip stream differences across npm/Node versions (local pack used Node v24.11.1; registry was published from CI on Node 20.x) — **not** content drift: `package.json`, `README.md`, `CHANGELOG.md`, and `LICENSE` are byte-identical between the packed tarball and `git show v0.5.0:<path>` for each file (verified independently of the local `npm pack`, so this holds regardless of the packer's Node version). Registry tarball matches npm `dist.shasum` `f912f88fee5a8499eadac70ddcbf4a25660fbe76`.
 - Local verification used **Node v24.11.1**; publish workflow uses **Node 20.x** on Ubuntu ([publish.yml](../.github/workflows/publish.yml)). Despite Node major difference, compiled `dist/` artifacts matched registry byte-for-byte.
 
 ### AC 4 — CI, CodeQL, and Publish workflow (release gate)
@@ -74,11 +74,13 @@ These fields are **identical** in both tarballs (local pack vs registry pack; no
 
 Workflow runs confirmed via the public [GitHub Actions](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions) UI on 2026-07-29 (listed as successful; no failure marker on these runs):
 
-| Check                                   | Run                                                                | Link                                                                                                                                                                     |
-| --------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **CI** on merge commit `c28e346` (#236) | CI **#480** — “Updated documents for new release (#236)” on `main` | [CI workflow](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/workflows/ci.yml?query=commit%3Ac28e346efafadbfef98891e523d566eebe957dad)         |
-| **CodeQL** on `c28e346`                 | CodeQL **#505** — same commit on `main`                            | [CodeQL workflow](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/workflows/codeql.yml?query=commit%3Ac28e346efafadbfef98891e523d566eebe957dad) |
-| **Publish to npm** for release `v0.5.0` | Publish **#11** — “Release v0.5.0 published” (~3m 25s)             | [Publish workflow](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/workflows/publish.yml?query=event%3Arelease)                                 |
+| Check                                   | Run                                                                | Link                                                                                                             |
+| ---------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **CI** on merge commit `c28e346` (#236) | CI **#480** — “Updated documents for new release (#236)” on `main` | [Run #480](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/runs/30117302054) — Success |
+| **CodeQL** on `c28e346`                 | CodeQL **#505** — same commit on `main`                            | [Run #505](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/runs/30117301927) — Success |
+| **Publish to npm** for release `v0.5.0` | Publish **#11** — “Release v0.5.0 published” (~3m 25s)             | [Run #11](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/actions/runs/30117705749) — Success  |
+
+Direct run permalinks (not `?query=` filters, which GitHub Actions silently ignores for this UI and would otherwise land on the unfiltered run list).
 
 Release: [v0.5.0](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/releases/tag/v0.5.0) · [Commit checks](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/commit/c28e346efafadbfef98891e523d566eebe957dad/checks)
 
@@ -119,4 +121,4 @@ npm pack
 npm pack @will-cppa/pinecone-read-only-mcp@0.5.0
 ```
 
-**Docs link-check:** `npm run docs:link-check` — exit **0** on 2026-07-29 (local). Add PR CI `quality` job URL here after you push.
+**Docs link-check:** `npm run docs:link-check` — exit **0** on 2026-07-30 (local, after extending the checker with heading-anchor validation and fixing the anchors it flagged). **Pending:** record the PR #242 `quality` job run URL here once CI finishes on the pushed commit — see the [PR #242 checks tab](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/pull/242/checks).

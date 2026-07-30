@@ -45,6 +45,9 @@ coverage/
 
 # Misc
 .npmrc
+.temp/
+.tmp/
+cursor_logs/
 
 # Scripts
 scripts/*.bat
