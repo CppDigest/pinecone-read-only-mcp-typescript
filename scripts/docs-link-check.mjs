@@ -8,10 +8,11 @@
  * gap with a self-contained GitHub-slug implementation (no extra dependency) so a
  * renamed/retitled heading that leaves a dangling `#anchor` fails CI.
  */
-
 import { spawnSync } from 'node:child_process';
+import { error, log } from 'node:console';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
+import process from 'node:process';
 
 /** @param {string} dir @returns {string[]} */
 function walkMarkdownFiles(dir) {
@@ -38,18 +39,21 @@ const paths = ['README.md', 'CHANGELOG.md', ...walkMarkdownFiles('docs')];
  */
 const SLUG_STRIP_RE = /[!-,./:-@[-^`{-~\u00A1-\u00BF\u00D7\u00F7\u2000-\u206F\u2190-\u21FF]/g;
 
+const CODE_SPAN_PLACEHOLDER = '@@CODESPAN';
+
 /** @param {string} text @returns {string} */
 function stripInlineMarkdown(text) {
   const codeSpans = [];
   let out = text.replace(/`([^`]*)`/g, (_m, inner) => {
     codeSpans.push(inner);
-    return `\u0000${codeSpans.length - 1}\u0000`;
+    return `${CODE_SPAN_PLACEHOLDER}${codeSpans.length - 1}@@`;
   });
   out = out
     .replace(/\*\*([^*]*)\*\*/g, '$1')
     .replace(/\*([^*]*)\*/g, '$1')
     .replace(/_([^_]*)_/g, '$1');
-  return out.replace(/\u0000(\d+)\u0000/g, (_m, i) => codeSpans[Number(i)]);
+  const placeholderRe = new RegExp(`${CODE_SPAN_PLACEHOLDER}(\\d+)@@`, 'g');
+  return out.replace(placeholderRe, (_m, i) => codeSpans[Number(i)]);
 }
 
 /** @param {string} text @returns {string} */
@@ -141,10 +145,10 @@ const linkExit = linkResult.status === null ? 1 : linkResult.status;
 
 const anchorFailures = checkHeadingAnchors();
 if (anchorFailures.length > 0) {
-  console.error(`\nERROR: ${anchorFailures.length} dead heading anchor(s) found!`);
-  for (const f of anchorFailures) console.error(`  [✖] ${f}`);
+  error(`\nERROR: ${anchorFailures.length} dead heading anchor(s) found!`);
+  for (const f of anchorFailures) error(`  [✖] ${f}`);
 } else {
-  console.log('\nAll heading anchors resolve.');
+  log('\nAll heading anchors resolve.');
 }
 
 process.exit(linkExit !== 0 ? linkExit : anchorFailures.length > 0 ? 1 : 0);
