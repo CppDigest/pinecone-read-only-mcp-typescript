@@ -119,6 +119,29 @@ npm run build
 npm pack --dry-run
 npm pack
 npm pack @will-cppa/pinecone-read-only-mcp@0.5.0
+
+# Extract local and registry tarballs; compare dist/** SHA-256 (expect 0 mismatches)
+$localTgz = (Get-ChildItem -Name 'will-cppa-pinecone-read-only-mcp-0.5.0.tgz' | Select-Object -First 1)
+$registryTgz = (Get-ChildItem -Name 'will-cppa-pinecone-read-only-mcp-*.tgz' | Where-Object { $_ -ne $localTgz } | Select-Object -First 1)
+Remove-Item -Recurse -Force .tmp\verify-local, .tmp\verify-registry -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force .tmp\verify-local, .tmp\verify-registry | Out-Null
+tar -xf $localTgz -C .tmp\verify-local
+tar -xf $registryTgz -C .tmp\verify-registry
+$localDist = '.tmp\verify-local\package\dist'
+$registryDist = '.tmp\verify-registry\package\dist'
+$localFiles = Get-ChildItem $localDist -Recurse -File | ForEach-Object { $_.FullName.Substring((Resolve-Path $localDist).Path.Length + 1) }
+$registryFiles = Get-ChildItem $registryDist -Recurse -File | ForEach-Object { $_.FullName.Substring((Resolve-Path $registryDist).Path.Length + 1) }
+Compare-Object $localFiles $registryFiles
+$mismatches = @()
+foreach ($rel in $localFiles) {
+  $lHash = (Get-FileHash -Algorithm SHA256 (Join-Path $localDist $rel)).Hash
+  $rHash = (Get-FileHash -Algorithm SHA256 (Join-Path $registryDist $rel)).Hash
+  if ($lHash -ne $rHash) { $mismatches += $rel }
+}
+if ($mismatches.Count -gt 0) { throw "dist hash mismatches: $($mismatches -join ', ')" }
+'dist/** SHA-256 parity: 0 mismatches'
 ```
+
+On Ubuntu (publish workflow host), after extracting both tarballs under `.tmp/verify-local/package/dist` and `.tmp/verify-registry/package/dist`, compare with `sha256sum` on each relative path; expect identical digests for every file under `dist/`.
 
 **Docs link-check:** `npm run docs:link-check` — exit **0** on 2026-07-30 (local, after extending the checker with heading-anchor validation and fixing the anchors it flagged). **Pending:** record the PR #242 `quality` job run URL here once CI finishes on the pushed commit — see the [PR #242 checks tab](https://github.com/cppalliance/pinecone-read-only-mcp-typescript/pull/242/checks).

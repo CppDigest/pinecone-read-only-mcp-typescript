@@ -28,9 +28,9 @@ npm run ci
 | ------ | ------- |
 | `npm run build` | Clean `dist/` and `tsc` compile |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run lint` | ESLint on `src/` |
+| `npm run lint` | ESLint on `src/` and `scripts/` |
 | `npm run lint:fix` | ESLint with `--fix` |
-| `npm run format` | Prettier write (`src/**/*.ts`, config JSON) |
+| `npm run format` | Prettier write (`src/**/*.ts`, `scripts/**/*.{mjs,ts}`, config JSON) |
 | `npm run format:check` | Prettier check |
 | `npm test` | Vitest once |
 | `npm run test:coverage` | Vitest + coverage thresholds (`vitest.config.ts`) |

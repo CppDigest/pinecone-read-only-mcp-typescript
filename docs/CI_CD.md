@@ -21,7 +21,7 @@
 
 **Job `quality`**
 
-- Ubuntu + Node 20: `npm audit --audit-level=moderate` (continue-on-error) → `npm pack --dry-run` → **`npm run docs:link-check`** (single `npx markdown-link-check` over `README.md`, `CHANGELOG.md`, and all `docs/**/*.md`).
+- Ubuntu + Node 20: `npm audit --audit-level=moderate` (continue-on-error) → `npm pack --dry-run` → **`npm run docs:link-check`** (`markdown-link-check` for file/URL targets plus heading-anchor validation in `scripts/docs-link-check.mjs`).
 
 ---
 

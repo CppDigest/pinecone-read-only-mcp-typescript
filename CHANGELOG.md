@@ -8,6 +8,10 @@ Tagged releases are published to npm from GitHub Actions when a **GitHub Release
 
 ## [Unreleased]
 
+### Changed
+
+- **`docs:link-check`:** validates Markdown heading fragment anchors (GitHub-style slugs) in addition to file/URL existence; unit tests cover slug helpers in `scripts/docs-link-check.mjs`.
+
 ## [0.5.0] - 2026-07-25
 
 ### Added

@@ -172,9 +172,7 @@ async function test() {
       console.log(
         `⚠️  Keyword search skipped: sparse index has no namespaces (or index unavailable).`
       );
-      console.log(
-        `   Ensure the sparse index (PINECONE_INDEX_NAME-sparse) exists and has data.`
-      );
+      console.log(`   Ensure the sparse index (PINECONE_INDEX_NAME-sparse) exists and has data.`);
     } else {
       const sparseTestNamespace = sparseNamespaces[0].namespace;
       console.log(`\n🔤 Test 5: Keyword search (sparse-only index)`);

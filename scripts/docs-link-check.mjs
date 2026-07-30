@@ -13,6 +13,7 @@ import { error, log } from 'node:console';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 /** @param {string} dir @returns {string[]} */
 function walkMarkdownFiles(dir) {
@@ -30,7 +31,10 @@ function walkMarkdownFiles(dir) {
   return out;
 }
 
-const paths = ['README.md', 'CHANGELOG.md', ...walkMarkdownFiles('docs')];
+/** @returns {string[]} */
+export function defaultMarkdownPaths() {
+  return ['README.md', 'CHANGELOG.md', ...walkMarkdownFiles('docs')];
+}
 
 /**
  * ASCII + common Unicode punctuation stripped by GitHub's heading slugger
@@ -42,27 +46,24 @@ const SLUG_STRIP_RE = /[!-,./:-@[-^`{-~\u00A1-\u00BF\u00D7\u00F7\u2000-\u206F\u2
 const CODE_SPAN_PLACEHOLDER = '@@CODESPAN';
 
 /** @param {string} text @returns {string} */
-function stripInlineMarkdown(text) {
+export function stripInlineMarkdown(text) {
   const codeSpans = [];
   let out = text.replace(/`([^`]*)`/g, (_m, inner) => {
     codeSpans.push(inner);
     return `${CODE_SPAN_PLACEHOLDER}${codeSpans.length - 1}@@`;
   });
-  out = out
-    .replace(/\*\*([^*]*)\*\*/g, '$1')
-    .replace(/\*([^*]*)\*/g, '$1')
-    .replace(/_([^_]*)_/g, '$1');
+  out = out.replace(/\*\*([^*]*)\*\*/g, '$1').replace(/\*([^*]*)\*/g, '$1');
   const placeholderRe = new RegExp(`${CODE_SPAN_PLACEHOLDER}(\\d+)@@`, 'g');
   return out.replace(placeholderRe, (_m, i) => codeSpans[Number(i)]);
 }
 
 /** @param {string} text @returns {string} */
-function slugify(text) {
+export function slugify(text) {
   return stripInlineMarkdown(text).toLowerCase().replace(SLUG_STRIP_RE, '').replace(/ /g, '-');
 }
 
 /** @param {string} content @returns {Set<string>} */
-function headingSlugs(content) {
+export function headingSlugs(content) {
   const slugs = new Set();
   const occurrences = Object.create(null);
   let inCodeBlock = false;
@@ -87,10 +88,24 @@ function headingSlugs(content) {
   return slugs;
 }
 
-/** @param {string} content @returns {Array<{line: number, target: string}>} */
-function extractFragmentLinks(content) {
-  const links = [];
+/** @param {string} line @param {number} lineNo @param {Array<{line: number, target: string}>} links */
+function extractFragmentLinksFromLine(line, lineNo, links) {
   const linkRe = /\[[^\]]*\]\(([^)]+)\)/g;
+  line.split('`').forEach((segment, i) => {
+    if (i % 2 === 1) return;
+    let m;
+    while ((m = linkRe.exec(segment)) !== null) {
+      const target = m[1].trim();
+      if (/^https?:\/\//.test(target) || target.startsWith('mailto:')) continue;
+      if (!target.includes('#')) continue;
+      links.push({ line: lineNo, target });
+    }
+  });
+}
+
+/** @param {string} content @returns {Array<{line: number, target: string}>} */
+export function extractFragmentLinks(content) {
+  const links = [];
   let inCodeBlock = false;
   content.split(/\r?\n/).forEach((line, idx) => {
     if (/^```/.test(line.trim())) {
@@ -98,19 +113,13 @@ function extractFragmentLinks(content) {
       return;
     }
     if (inCodeBlock) return;
-    let m;
-    while ((m = linkRe.exec(line)) !== null) {
-      const target = m[1].trim();
-      if (/^https?:\/\//.test(target) || target.startsWith('mailto:')) continue;
-      if (!target.includes('#')) continue;
-      links.push({ line: idx + 1, target });
-    }
+    extractFragmentLinksFromLine(line, idx + 1, links);
   });
   return links;
 }
 
-/** @returns {string[]} human-readable failure descriptions */
-function checkHeadingAnchors() {
+/** @param {string[]} [paths] @returns {string[]} human-readable failure descriptions */
+export function checkHeadingAnchors(paths = defaultMarkdownPaths()) {
   const slugsByFile = new Map();
   for (const p of paths) {
     slugsByFile.set(resolve(p), headingSlugs(readFileSync(p, 'utf8')));
@@ -126,29 +135,41 @@ function checkHeadingAnchors() {
       const anchor = target.slice(hashIdx + 1);
       const targetAbs = filePart === '' ? abs : resolve(dirname(abs), filePart);
       const slugs = slugsByFile.get(targetAbs);
-      if (!slugs) continue; // target file outside the checked set (e.g. not markdown); skip
+      if (!slugs) continue;
       if (!slugs.has(anchor)) {
-        failures.push(`${p}:${line} -> ${target} (no heading slug "${anchor}" in ${relative('.', targetAbs)})`);
+        failures.push(
+          `${p}:${line} -> ${target} (no heading slug "${anchor}" in ${relative('.', targetAbs)})`
+        );
       }
     }
   }
   return failures;
 }
 
-const shell = process.platform === 'win32';
-const linkResult = spawnSync(
-  'npx',
-  ['--yes', 'markdown-link-check@3', '-c', '.markdown-link-check.json', ...paths],
-  { stdio: 'inherit', shell }
-);
-const linkExit = linkResult.status === null ? 1 : linkResult.status;
+function main() {
+  const paths = defaultMarkdownPaths();
+  const shell = process.platform === 'win32';
+  const linkResult = spawnSync(
+    'npx',
+    ['--yes', 'markdown-link-check@3', '-c', '.markdown-link-check.json', ...paths],
+    { stdio: 'inherit', shell }
+  );
+  const linkExit = linkResult.status === null ? 1 : linkResult.status;
 
-const anchorFailures = checkHeadingAnchors();
-if (anchorFailures.length > 0) {
-  error(`\nERROR: ${anchorFailures.length} dead heading anchor(s) found!`);
-  for (const f of anchorFailures) error(`  [✖] ${f}`);
-} else {
-  log('\nAll heading anchors resolve.');
+  const anchorFailures = checkHeadingAnchors(paths);
+  if (anchorFailures.length > 0) {
+    error(`\nERROR: ${anchorFailures.length} dead heading anchor(s) found!`);
+    for (const f of anchorFailures) error(`  [✖] ${f}`);
+  } else {
+    log('\nAll heading anchors resolve.');
+  }
+
+  process.exit(linkExit !== 0 ? linkExit : anchorFailures.length > 0 ? 1 : 0);
 }
 
-process.exit(linkExit !== 0 ? linkExit : anchorFailures.length > 0 ? 1 : 0);
+const isMain =
+  process.argv[1] && resolve(fileURLToPath(import.meta.url)) === resolve(process.argv[1]);
+
+if (isMain) {
+  main();
+}
